@@ -14,73 +14,159 @@ class FoodLoopApp extends StatelessWidget {
     );
   }
 }
-class LandingPage extends StatelessWidget {
+
+class LandingPage extends StatefulWidget {
+  @override
+  _LandingPageState createState() => _LandingPageState();
+}
+
+class _LandingPageState extends State<LandingPage>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeInAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: Duration(milliseconds: 1500),
+      vsync: this,
+    );
+
+    _fadeInAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Interval(0.0, 0.5, curve: Curves.easeOut),
+    ));
+
+    _slideAnimation = Tween<Offset>(
+      begin: Offset(0, 0.5),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Interval(0.3, 0.8, curve: Curves.easeOut),
+    ));
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xFFFFC107), // Yellow background
       body: SafeArea(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Spacer(),
-            Center(
-              child: Column(
-                children: [
-                  Text(
-                    "FoodLoop PH",
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Spacer(),
+              FadeTransition(
+                opacity: _fadeInAnimation,
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.15),
+                        ),
+                        child: Icon(
+                          Icons.restaurant,
+                          size: 64,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: 24),
+                      Text(
+                        "FoodLoop PH",
+                        style: GoogleFonts.poppins(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        "Share Food. Fight Waste.\nFeed Communities.",
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                          height: 1.4,
+                        ),
+                      ),
+                      SizedBox(height: 24),
+                      Container(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          "Post surplus food and\nhelp others nearby",
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            color: Colors.black54,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    "Share Food. Fight Waste.\nFeed Communities.",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  Text(
-                    "Post surplus food and\nhelp others nearby",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.black54,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Spacer(),
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  minimumSize: Size(double.infinity, 50),
                 ),
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => LoginScreen()),
-                  );
-                },
-                child: Text(
-                  "Get started",
-                  style: TextStyle(fontSize: 16, color: Colors.white),
+              ),
+              Spacer(),
+              FadeTransition(
+                opacity: _fadeInAnimation,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 32.0),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      foregroundColor: Colors.white,
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      minimumSize: Size(double.infinity, 56),
+                      elevation: 4,
+                    ),
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => LoginScreen()),
+                      );
+                    },
+                    child: Text(
+                      "Get started",
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            )
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -98,6 +184,32 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   bool _rememberMe = false;
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _handleLogin() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() => _isLoading = true);
+
+      // Simulate network delay
+      await Future.delayed(Duration(seconds: 1));
+
+      setState(() => _isLoading = false);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen()),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,123 +218,253 @@ class _LoginScreenState extends State<LoginScreen> {
       body: Center(
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(horizontal: 30, vertical: 40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              RichText(
-                text: TextSpan(
-                  style: GoogleFonts.poppins(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  children: [
-                    TextSpan(
-                      text: "Food",
-                      style: TextStyle(color: Colors.black87),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Hero(
+                  tag: 'logo',
+                  child: RichText(
+                    text: TextSpan(
+                      style: GoogleFonts.poppins(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      children: [
+                        TextSpan(
+                          text: "Food",
+                          style: TextStyle(color: Colors.black87),
+                        ),
+                        TextSpan(
+                          text: "Loop PH",
+                          style: TextStyle(color: Colors.amber[700]),
+                        ),
+                      ],
                     ),
-                    TextSpan(
-                      text: "Loop PH",
-                      style: TextStyle(color: Colors.amber[700]),
+                  ),
+                ),
+                SizedBox(height: 20),
+                Text(
+                  "Share Food. Fight Waste.\nFeed Communities.",
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                    height: 1.4,
+                  ),
+                ),
+                SizedBox(height: 40),
+                Text(
+                  "Welcome back!",
+                  style: GoogleFonts.poppins(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  "Please enter your details",
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                SizedBox(height: 30),
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    labelText: "Email",
+                    hintText: "Enter your email",
+                    prefixIcon: Icon(Icons.email_outlined, color: Colors.grey),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          BorderSide(color: Colors.amber[700]!, width: 2),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your email';
+                    }
+                    if (!value.contains('@')) {
+                      return 'Please enter a valid email';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 20),
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  decoration: InputDecoration(
+                    labelText: "Password",
+                    hintText: "Enter your password",
+                    prefixIcon: Icon(Icons.lock_outline, color: Colors.grey),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () {
+                        setState(() => _obscurePassword = !_obscurePassword);
+                      },
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          BorderSide(color: Colors.amber[700]!, width: 2),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your password';
+                    }
+                    if (value.length < 6) {
+                      return 'Password must be at least 6 characters';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: Checkbox(
+                            value: _rememberMe,
+                            onChanged: (v) => setState(() => _rememberMe = v!),
+                            activeColor: Colors.amber[700],
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          "Remember Me",
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => ForgotPasswordPage()),
+                        );
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.amber[700],
+                      ),
+                      child: Text(
+                        "Forgot Password?",
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ],
                 ),
-              ),
-              SizedBox(height: 15),
-              Text(
-                "Share Food. Fight Waste.\nFeed Communities.",
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
-              SizedBox(height: 30),
-              Text("Please enter your details",
-                  style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
-              SizedBox(height: 20),
-
-              TextField(
-                decoration: InputDecoration(
-                  labelText: "Email",
-                  border: UnderlineInputBorder(),
-                ),
-              ),
-              SizedBox(height: 15),
-              TextField(
-                obscureText: _obscurePassword,
-                decoration: InputDecoration(
-                  labelText: "Password",
-                  border: UnderlineInputBorder(),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility),
-                    onPressed: () {
-                      setState(() => _obscurePassword = !_obscurePassword);
-                    },
-                  ),
-                ),
-              ),
-              SizedBox(height: 10),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: _rememberMe,
-                        onChanged: (v) => setState(() => _rememberMe = v!),
+                SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black87,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      Text("Remember Me", style: GoogleFonts.poppins(fontSize: 12)),
-                    ],
+                      elevation: 2,
+                    ),
+                    onPressed: _isLoading ? null : _handleLogin,
+                    child: _isLoading
+                        ? SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            "Sign In",
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
-                  TextButton(
-                    onPressed: () { Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ForgotPasswordPage()),
-                  );
-                  },
-                    child: Text("Forgot Password ?", style: GoogleFonts.poppins(fontSize: 12)),
-                  )
-                ],
-              ),
-              SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black87,
-                    padding: EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => HomeScreen()),
-                    );
-                  },
-                  child: Text("Sign In", style: GoogleFonts.poppins(color: Colors.white)),
                 ),
-              ),
-              SizedBox(height: 30),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text("Don't have an account ? ",
-                      style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => SignUpScreen()),
-                      );
-                    },
-                    child: Text("Sign Up",
-                        style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-            ],
+                SizedBox(height: 30),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Don't have an account? ",
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => SignUpScreen()),
+                        );
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.amber[700],
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size(0, 0),
+                      ),
+                      child: Text(
+                        "Sign Up",
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -311,7 +553,9 @@ class ForgotPasswordPage extends StatelessWidget {
                     if (email.isNotEmpty) {
                       // TODO: Handle forgot password logic here
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Password reset link sent to $email")),
+                        SnackBar(
+                            content:
+                                Text("Password reset link sent to $email")),
                       );
                     }
                   },
@@ -344,6 +588,40 @@ class SignUpScreen extends StatefulWidget {
 class _SignUpScreenState extends State<SignUpScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  void _handleSignUp() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() => _isLoading = true);
+
+      // Simulate network delay
+      await Future.delayed(Duration(seconds: 1));
+
+      setState(() => _isLoading = false);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen()),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -352,106 +630,339 @@ class _SignUpScreenState extends State<SignUpScreen> {
       body: Center(
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(horizontal: 30, vertical: 40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              RichText(
-                text: TextSpan(
-                  style: GoogleFonts.poppins(fontSize: 32, fontWeight: FontWeight.bold),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Hero(
+                  tag: 'logo',
+                  child: RichText(
+                    text: TextSpan(
+                      style: GoogleFonts.poppins(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      children: [
+                        TextSpan(
+                          text: "Hi!\n",
+                          style: TextStyle(color: Colors.black87),
+                        ),
+                        TextSpan(
+                          text: "Welcome",
+                          style: TextStyle(color: Colors.amber[700]),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  "Let's create an account",
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                    height: 1.4,
+                  ),
+                ),
+                SizedBox(height: 32),
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    labelText: "Email",
+                    hintText: "Enter your email",
+                    prefixIcon: Icon(Icons.email_outlined, color: Colors.grey),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          BorderSide(color: Colors.amber[700]!, width: 2),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your email';
+                    }
+                    if (!value.contains('@')) {
+                      return 'Please enter a valid email';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 20),
+                Row(
                   children: [
-                    TextSpan(text: "Hi !\n", style: TextStyle(color: Colors.black87)),
-                    TextSpan(text: "Welcome", style: TextStyle(color: Colors.amber[700])),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _firstNameController,
+                        decoration: InputDecoration(
+                          labelText: "First name",
+                          hintText: "Enter first name",
+                          prefixIcon:
+                              Icon(Icons.person_outline, color: Colors.grey),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                BorderSide(color: Colors.amber[700]!, width: 2),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Required';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _lastNameController,
+                        decoration: InputDecoration(
+                          labelText: "Last name",
+                          hintText: "Enter last name",
+                          prefixIcon:
+                              Icon(Icons.person_outline, color: Colors.grey),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                BorderSide(color: Colors.amber[700]!, width: 2),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Required';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
                   ],
                 ),
-              ),
-              SizedBox(height: 10),
-              Text("Let's create an account",
-                  style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey)),
-              SizedBox(height: 25),
-              TextField(
-                decoration: InputDecoration(labelText: "Email", border: UnderlineInputBorder()),
-              ),
-              SizedBox(height: 15),
-              Row(
-                children: [
-                  Expanded(
-                      child: TextField(
-                          decoration: InputDecoration(
-                              labelText: "First name", border: UnderlineInputBorder()))),
-                  SizedBox(width: 15),
-                  Expanded(
-                      child: TextField(
-                          decoration: InputDecoration(
-                              labelText: "Last name", border: UnderlineInputBorder()))),
-                ],
-              ),
-              SizedBox(height: 15),
-              TextField(
-                decoration: InputDecoration(labelText: "Username", border: UnderlineInputBorder()),
-              ),
-              SizedBox(height: 15),
-              TextField(
-                obscureText: _obscurePassword,
-                decoration: InputDecoration(
-                  labelText: "Password",
-                  border: UnderlineInputBorder(),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility),
-                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                SizedBox(height: 20),
+                TextFormField(
+                  controller: _usernameController,
+                  decoration: InputDecoration(
+                    labelText: "Username",
+                    hintText: "Choose a username",
+                    prefixIcon: Icon(Icons.alternate_email, color: Colors.grey),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          BorderSide(color: Colors.amber[700]!, width: 2),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
                   ),
-                ),
-              ),
-              Text("Must contain a number and at least 6 characters",
-                  style: GoogleFonts.poppins(fontSize: 10, color: Colors.grey)),
-              SizedBox(height: 15),
-              TextField(
-                obscureText: _obscureConfirmPassword,
-                decoration: InputDecoration(
-                  labelText: "Confirm Password",
-                  border: UnderlineInputBorder(),
-                  suffixIcon: IconButton(
-                    icon: Icon(_obscureConfirmPassword
-                        ? Icons.visibility_off
-                        : Icons.visibility),
-                    onPressed: () =>
-                        setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-                  ),
-                ),
-              ),
-              Text("Must contain a number and at least 6 characters",
-                  style: GoogleFonts.poppins(fontSize: 10, color: Colors.grey)),
-              SizedBox(height: 25),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black87,
-                      padding: EdgeInsets.symmetric(vertical: 14)),
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => HomeScreen()),
-                    );
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please choose a username';
+                    }
+                    if (value.length < 3) {
+                      return 'Username must be at least 3 characters';
+                    }
+                    return null;
                   },
-                  child: Text("Sign Up",
-                      style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
-              ),
-              SizedBox(height: 30),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text("Have an account ? ",
-                      style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Text("Sign in",
-                        style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.bold)),
+                SizedBox(height: 20),
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  decoration: InputDecoration(
+                    labelText: "Password",
+                    hintText: "Create a password",
+                    prefixIcon: Icon(Icons.lock_outline, color: Colors.grey),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          BorderSide(color: Colors.amber[700]!, width: 2),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
                   ),
-                ],
-              ),
-            ],
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a password';
+                    }
+                    if (value.length < 6) {
+                      return 'Password must be at least 6 characters';
+                    }
+                    if (!value.contains(RegExp(r'[0-9]'))) {
+                      return 'Password must contain at least one number';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 8),
+                Text(
+                  "Must contain a number and at least 6 characters",
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                SizedBox(height: 20),
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  obscureText: _obscureConfirmPassword,
+                  decoration: InputDecoration(
+                    labelText: "Confirm Password",
+                    hintText: "Confirm your password",
+                    prefixIcon: Icon(Icons.lock_outline, color: Colors.grey),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureConfirmPassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () => setState(() =>
+                          _obscureConfirmPassword = !_obscureConfirmPassword),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          BorderSide(color: Colors.amber[700]!, width: 2),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please confirm your password';
+                    }
+                    if (value != _passwordController.text) {
+                      return 'Passwords do not match';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black87,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 2,
+                    ),
+                    onPressed: _isLoading ? null : _handleSignUp,
+                    child: _isLoading
+                        ? SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            "Sign Up",
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                  ),
+                ),
+                SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Have an account? ",
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.amber[700],
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size(0, 0),
+                      ),
+                      child: Text(
+                        "Sign in",
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -462,7 +973,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 //
 // HOME SCREEN WITH NAVIGATION
 //
-
 
 // 🔹 Home Screen with donations list
 class HomePage extends StatelessWidget {
@@ -507,8 +1017,7 @@ class HomePage extends StatelessWidget {
               children: [
                 const Icon(Icons.location_on, size: 16, color: Colors.black),
                 const SizedBox(width: 4),
-                Text("Dasmariñas",
-                    style: GoogleFonts.poppins(fontSize: 13)),
+                Text("Dasmariñas", style: GoogleFonts.poppins(fontSize: 13)),
               ],
             ),
           ],
@@ -659,7 +1168,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHomePage() {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         toolbarHeight: 90,
         backgroundColor: Colors.amber[700],
@@ -668,94 +1177,269 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Good morning, User",
-                style: GoogleFonts.poppins(
-                    fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
+            Text(
+              "Good morning, User",
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 6),
             Row(
               children: [
-                const Icon(Icons.location_on, size: 16, color: Colors.black),
-                const SizedBox(width: 4),
-                Text("Dasmariñas",
-                    style: GoogleFonts.poppins(fontSize: 13)),
+                Container(
+                  padding: EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.black12,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child:
+                      Icon(Icons.location_on, size: 16, color: Colors.black87),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  "Dasmariñas",
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.black87,
+                  ),
+                ),
               ],
             ),
           ],
         ),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 20),
-            child: Icon(Icons.notifications, size: 26, color: Colors.black),
-          )
+        actions: [
+          Container(
+            margin: EdgeInsets.only(right: 20),
+            decoration: BoxDecoration(
+              color: Colors.black12,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: Icon(Icons.notifications_outlined, color: Colors.black87),
+              onPressed: () {},
+            ),
+          ),
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Food donations",
-                style: GoogleFonts.poppins(
-                    fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Food donations",
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () {},
+                  icon: Icon(Icons.filter_list, size: 20),
+                  label: Text("Filter"),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.grey[700],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
             Expanded(
               child: ListView.builder(
                 itemCount: donations.length,
                 itemBuilder: (context, index) {
                   final item = donations[index];
-                  return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 6),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(item["img"]!,
-                                width: 60, height: 60, fit: BoxFit.cover),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
+                  return AnimatedContainer(
+                    duration: Duration(milliseconds: 200),
+                    margin: EdgeInsets.only(bottom: 16),
+                    child: Material(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      elevation: 2,
+                      shadowColor: Colors.black.withOpacity(0.1),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () {
+                          // Show details or expand card
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(item["name"]!,
+                                  Hero(
+                                    tag: 'food_image_${item["name"]}',
+                                    child: Container(
+                                      width: 80,
+                                      height: 80,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(12),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color:
+                                                Colors.black.withOpacity(0.1),
+                                            blurRadius: 8,
+                                            offset: Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Image.network(
+                                          item["img"]!,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item["name"]!,
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black87,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.location_on,
+                                              size: 14,
+                                              color: Colors.grey[600],
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                item["address"]!,
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[600],
+                                                ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: [
+                                        Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[100],
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.shopping_basket_outlined,
+                                                size: 16,
+                                                color: Colors.grey[700],
+                                              ),
+                                              SizedBox(width: 4),
+                                              Text(
+                                                "4 pcs",
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[700],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[100],
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.restaurant_outlined,
+                                                size: 16,
+                                                color: Colors.grey[700],
+                                              ),
+                                              SizedBox(width: 4),
+                                              Text(
+                                                item["food"]!,
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[700],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.amber[700],
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 12,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    onPressed: () {},
+                                    child: Text(
+                                      "Accept",
                                       style: GoogleFonts.poppins(
-                                          fontWeight: FontWeight.bold),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis),
-                                  const SizedBox(height: 2),
-                                  Text(item["address"]!,
-                                      style:
-                                          GoogleFonts.poppins(fontSize: 11),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis),
-                                  const SizedBox(height: 6),
-                                  Wrap(
-                                    spacing: 6,
-                                    runSpacing: -6,
-                                    children: [
-                                      Chip(label: Text("Quantity: 4 pcs")),
-                                      Chip(
-                                          label: Text(
-                                              "Food type: ${item['food']}")),
-                                    ],
-                                  )
-                                ]),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.amber[700],
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 8),
-                            ),
-                            onPressed: () {},
-                            child: const Text("Accept"),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   );
@@ -873,7 +1557,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
- Widget build(BuildContext context) {
+  Widget build(BuildContext context) {
     return Scaffold(
       endDrawer: Drawer(
         child: SafeArea(
@@ -916,7 +1600,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => WatchlistPage()),
+                          MaterialPageRoute(
+                              builder: (context) => WatchlistPage()),
                         );
                       },
                     ),
@@ -926,7 +1611,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => ListingsPage()),
+                          MaterialPageRoute(
+                              builder: (context) => ListingsPage()),
                         );
                       },
                     ),
@@ -937,7 +1623,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => ProfilePage()),
+                          MaterialPageRoute(
+                              builder: (context) => ProfilePage()),
                         );
                       },
                     ),
@@ -947,7 +1634,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => AccountPage()),
+                          MaterialPageRoute(
+                              builder: (context) => AccountPage()),
                         );
                       },
                     ),
@@ -957,7 +1645,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => NotificationPage()),
+                          MaterialPageRoute(
+                              builder: (context) => NotificationPage()),
                         );
                       },
                     ),
@@ -978,27 +1667,122 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-
       body: _pages[_selectedIndex],
       bottomNavigationBar: Builder(
-        builder: (context) => BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: (index) {
-            if (index == 4) {
-              Scaffold.of(context).openEndDrawer();
-            } else {
-              _onItemTapped(index);
-            }
-          },
-          selectedItemColor: Colors.black,
-          unselectedItemColor: Colors.grey,
-          items: [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: ""),
-            BottomNavigationBarItem(icon: Icon(Icons.search), label: ""),
-            BottomNavigationBarItem(icon: Icon(Icons.add_circle, size: 35), label: ""),
-            BottomNavigationBarItem(icon: Icon(Icons.message), label: ""),
-            BottomNavigationBarItem(icon: Icon(Icons.menu), label: ""),
-          ],
+        builder: (context) => Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: Offset(0, -5),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildNavItem(0, Icons.home_outlined, Icons.home),
+                  _buildNavItem(1, Icons.search_outlined, Icons.search),
+                  _buildAddButton(),
+                  _buildNavItem(
+                      3, Icons.chat_bubble_outline, Icons.chat_bubble),
+                  _buildMenuButton(context),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(
+      int index, IconData unselectedIcon, IconData selectedIcon) {
+    bool isSelected = _selectedIndex == index;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _onItemTapped(index),
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: 200),
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? Colors.amber[700]!.withOpacity(0.1)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Icon(
+            isSelected ? selectedIcon : unselectedIcon,
+            color: isSelected ? Colors.amber[700] : Colors.grey[600],
+            size: 24,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddButton() {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => _onItemTapped(2),
+          child: Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.amber[700],
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.amber[700]!.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Icon(
+              Icons.add,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuButton(BuildContext context) {
+    bool isSelected = _selectedIndex == 4;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          Scaffold.of(context).openEndDrawer();
+        },
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: 200),
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? Colors.amber[700]!.withOpacity(0.1)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Icon(
+            isSelected ? Icons.menu : Icons.menu_outlined,
+            color: isSelected ? Colors.amber[700] : Colors.grey[600],
+            size: 24,
+          ),
         ),
       ),
     );
@@ -1007,14 +1791,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
 // 🔹 Example Pages
 
-
-
 class WatchlistPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text("My Watchlist")),
-      body: Center(child: Text("Watchlist Page", style: TextStyle(fontSize: 24))),
+      body:
+          Center(child: Text("Watchlist Page", style: TextStyle(fontSize: 24))),
     );
   }
 }
@@ -1024,7 +1807,8 @@ class ListingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text("My Listings")),
-      body: Center(child: Text("Listings Page", style: TextStyle(fontSize: 24))),
+      body:
+          Center(child: Text("Listings Page", style: TextStyle(fontSize: 24))),
     );
   }
 }
@@ -1054,7 +1838,9 @@ class NotificationPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text("Notifications")),
-      body: Center(child: Text("Notification Settings Page", style: TextStyle(fontSize: 24))),
+      body: Center(
+          child: Text("Notification Settings Page",
+              style: TextStyle(fontSize: 24))),
     );
   }
 }
