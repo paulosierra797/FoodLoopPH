@@ -1,6 +1,7 @@
-// ForgotPasswordPage widget
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../supabase_client.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ForgotPasswordPage extends StatelessWidget {
   final TextEditingController _emailController = TextEditingController();
@@ -78,14 +79,30 @@ class ForgotPasswordPage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
-                  onPressed: () {
+                  onPressed: () async {
                     String email = _emailController.text.trim();
                     if (email.isNotEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text("Password reset link sent to $email"),
-                        ),
-                      );
+                      try {
+                        await supabase.auth.resetPasswordForEmail(
+                          email,
+                          redirectTo: kIsWeb
+                            ? 'http://localhost:54775/reset-password'
+                            : 'myapp://reset-password',
+                        );
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text("Password reset link sent to $email"),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } catch (error) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text("Error: ${error.toString()}"),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
                     }
                   },
                   child: Text(

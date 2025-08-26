@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'screens/landing_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'screens/landing_page.dart';
+import 'screens/reset_password_page.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:async';
 import 'supabase_client.dart'; // If you have a custom client file
 
 void main() async {
@@ -12,19 +15,66 @@ void main() async {
   );
   runApp(FoodLoopApp());
 }
-class FoodLoopApp extends StatelessWidget {
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+class FoodLoopApp extends StatefulWidget {
   const FoodLoopApp({super.key});
+
+  @override
+  State<FoodLoopApp> createState() => _FoodLoopAppState();
+}
+
+class _FoodLoopAppState extends State<FoodLoopApp> {
+  StreamSubscription? _sub;
+  Widget? _initialPage;
+
+  @override
+  void initState() {
+    super.initState();
+    // Supabase Auth State Listener
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      final event = data.event;
+      if (event == AuthChangeEvent.passwordRecovery) {
+        navigatorKey.currentState?.pushNamed('/reset-password');
+      }
+    });
+    // Web: check URL on startup
+    if (kIsWeb) {
+      if (Uri.base.path == '/reset-password') {
+        _initialPage = const ResetPasswordPage();
+      } else {
+        _initialPage = LandingPage();
+      }
+    } else {
+      _initialPage = LandingPage();
+      // If you want to keep uni_links for other deep links, uncomment below:
+      // _sub = uriLinkStream.listen((Uri? uri) {
+      //   if (uri != null && uri.path == '/reset-password') {
+      //     navigatorKey.currentState?.pushNamed('/reset-password');
+      //   }
+      // });
+    }
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: LandingPage(),
+      navigatorKey: navigatorKey,
+      home: _initialPage,
+      routes: {
+        '/reset-password': (context) => const ResetPasswordPage(),
+      },
     );
   }
 }
-
-
 
 
 
