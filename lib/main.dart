@@ -1,28 +1,56 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'screens/landing_page.dart';
-// Only import the landing page, which is used directly here
-import 'screens/landing_page.dart';
+import 'services/user_service.dart';
+import 'services/notification_service.dart';
 
-void main() {
-  runApp(FoodLoopApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize services
+  final userService = UserService();
+  final notificationService = NotificationService();
+
+  await userService.initialize();
+  await notificationService.initialize();
+
+  runApp(FoodLoopApp(
+    userService: userService,
+    notificationService: notificationService,
+  ));
 }
 
 class FoodLoopApp extends StatelessWidget {
-  const FoodLoopApp({super.key});
+  final UserService userService;
+  final NotificationService notificationService;
+
+  const FoodLoopApp({
+    super.key,
+    required this.userService,
+    required this.notificationService,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: LandingPage(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<UserService>.value(value: userService),
+        ChangeNotifierProvider<NotificationService>.value(
+            value: notificationService),
+      ],
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'FoodLoop PH',
+        theme: ThemeData(
+          primarySwatch: Colors.amber,
+          fontFamily: GoogleFonts.poppins().fontFamily,
+        ),
+        home: LandingPage(),
+      ),
     );
   }
 }
-
-
-
-
 
 //
 //Forgot Password

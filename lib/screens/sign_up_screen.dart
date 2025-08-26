@@ -1,7 +1,10 @@
 // SignUpScreen widget
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'home_screen.dart';
+import '../services/user_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -30,7 +33,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _usernameController.dispose();
-  _phoneController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -40,17 +43,48 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if (_formKey.currentState!.validate()) {
       if (!_agreedToTerms) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('You must agree to the Terms and Conditions and Privacy Policy to continue.')),
+          SnackBar(
+              content: Text(
+                  'You must agree to the Terms and Conditions and Privacy Policy to continue.')),
         );
         return;
       }
       setState(() => _isLoading = true);
-      await Future.delayed(Duration(seconds: 1));
-      setState(() => _isLoading = false);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => HomeScreen()),
-      );
+
+      try {
+        // Sign up user using UserService
+        final userService = Provider.of<UserService>(context, listen: false);
+        await userService.signUpUser(
+          firstName: _firstNameController.text,
+          lastName: _lastNameController.text,
+          username: _usernameController.text,
+          email: _emailController.text,
+          phoneNumber: _phoneController.text,
+          password: _passwordController.text,
+        );
+
+        setState(() => _isLoading = false);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Account created successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomeScreen()),
+        );
+      } catch (e) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error creating account: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -204,9 +238,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(11),
+                  ],
                   decoration: InputDecoration(
                     labelText: "Phone Number",
-                    hintText: "Enter your phone number",
+                    hintText: "Enter your 11-digit phone number",
                     prefixIcon: Icon(Icons.phone_outlined, color: Colors.grey),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -218,7 +256,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.amber[700]!, width: 2),
+                      borderSide:
+                          BorderSide(color: Colors.amber[700]!, width: 2),
                     ),
                     filled: true,
                     fillColor: Colors.grey[50],
@@ -227,8 +266,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your phone number';
                     }
-                    if (!RegExp(r'^\d{10,15}\$').hasMatch(value)) {
-                      return 'Enter a valid phone number';
+                    if (value.length != 11) {
+                      return 'Phone number must be exactly 11 digits';
+                    }
+                    if (!RegExp(r'^\d{11}$').hasMatch(value)) {
+                      return 'Phone number must contain only digits';
                     }
                     return null;
                   },
@@ -387,18 +429,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         },
                         child: RichText(
                           text: TextSpan(
-                            style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[700]),
+                            style: GoogleFonts.poppins(
+                                fontSize: 13, color: Colors.grey[700]),
                             children: [
                               TextSpan(text: 'I agree to the '),
                               TextSpan(
                                 text: 'Terms and Conditions',
-                                style: TextStyle(color: Colors.amber[700], fontWeight: FontWeight.w600, decoration: TextDecoration.underline),
+                                style: TextStyle(
+                                    color: Colors.amber[700],
+                                    fontWeight: FontWeight.w600,
+                                    decoration: TextDecoration.underline),
                                 // Add onTap for link if needed
                               ),
                               TextSpan(text: ' and '),
                               TextSpan(
                                 text: 'Privacy Policy',
-                                style: TextStyle(color: Colors.amber[700], fontWeight: FontWeight.w600, decoration: TextDecoration.underline),
+                                style: TextStyle(
+                                    color: Colors.amber[700],
+                                    fontWeight: FontWeight.w600,
+                                    decoration: TextDecoration.underline),
                                 // Add onTap for link if needed
                               ),
                               TextSpan(text: '.'),
