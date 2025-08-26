@@ -8,7 +8,6 @@ import 'watchlist_page.dart';
 import 'listings_page.dart';
 import 'profile_page.dart';
 import 'about_page.dart';
-import 'change_password_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -99,334 +98,246 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.amber[700],
-        automaticallyImplyLeading: false,
-        title: Consumer<UserService>(
-          builder: (context, userService, child) {
-            final userName = userService.currentUser?.firstName ?? "User";
-            return Text(
-              "Good morning, $userName",
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-            );
-          },
-        ),
-        actions: [
-          // Notification Icon with counter and dropdown
-          Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: Builder(
-              builder: (context) {
-                final unreadCount = _notifications.where((notif) => notif["isNew"] == true).length;
-                
-                return Stack(
-                  children: [
-                    GestureDetector(
-                      key: _notificationKey,
-                      onTap: () {
-                        setState(() {
-                          _isNotificationDropdownOpen = !_isNotificationDropdownOpen;
-                        });
-                      },
-                      child: Container(
-                        padding: EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: _isNotificationDropdownOpen
-                              ? Colors.black.withOpacity(0.1)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Icon(Icons.notifications,
-                            size: 26,
-                            color: _isNotificationDropdownOpen
-                                ? Colors.black87
-                                : Colors.black),
-                      ),
-                    ),
-                    // Notification Counter Badge
-                    if (unreadCount > 0)
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          padding: EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                          constraints: BoxConstraints(
-                            minWidth: 18,
-                            minHeight: 18,
-                          ),
-                          child: Text(
-                            unreadCount > 99 ? '99+' : unreadCount.toString(),
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                    if (_isNotificationDropdownOpen)
-                      Positioned(
-                        top: 40,
-                        right: 0,
-                        child: _buildNotificationDropdown(context, _notifications),
-                      ),
-                  ],
-                );
-              },
-            ),
-          ),
-          // Menu Icon
-          Padding(
-            padding: EdgeInsets.only(right: 20),
-            child: GestureDetector(
-              onTap: () {
-                _showSideMenu();
-              },
-              child: Container(
-                padding: EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Colors.transparent,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Icon(
-                  Icons.menu,
-                  size: 26,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-          )
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(12),
-        child: ListView.builder(
-          itemCount: donations.length,
-          itemBuilder: (context, index) {
-            final item = donations[index];
-            return Card(
-              margin: const EdgeInsets.symmetric(vertical: 6),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(item["img"]!,
-                          width: 60, height: 60, fit: BoxFit.cover),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(item["name"]!,
-                                style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.bold),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis),
-                            const SizedBox(height: 2),
-                            Text(item["address"]!,
-                                style: GoogleFonts.poppins(fontSize: 11),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis),
-                            const SizedBox(height: 6),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: -6,
-                              children: [
-                                Chip(label: Text("Quantity: 4 pcs")),
-                                Chip(
-                                    label: Text(
-                                        "Food type: " + (item['food'] ?? ''))),
-                              ],
-                            )
-                          ]),
-                    ),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.amber[700],
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
-                      ),
-                      onPressed: () {},
-                      child: const Text("Accept"),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNotificationDropdown(BuildContext context, List<Map<String, dynamic>> allNotifications) {
-    final filteredNotifications = _showAllNotifications
-        ? allNotifications
-        : allNotifications.where((notif) => notif["isNew"] == true).toList();
-
-    return Material(
-      elevation: 8,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 320,
-        constraints: BoxConstraints(maxHeight: 400),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[300]!),
-        ),
+      backgroundColor: Colors.grey[50],
+      body: SafeArea(
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            // Header with toggle
+            // Custom Header with Notifications and Menu
             Container(
               padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Colors.orange[400]!, Colors.amber[600]!],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.orange.withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: Offset(0, 8),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
                   Row(
                     children: [
-                      Text(
-                        "Notifications",
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      Spacer(),
-                      TextButton(
-                        onPressed: _markAllAsRead,
-                        child: Text(
-                          "Mark all read",
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: Colors.amber[700],
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
+                      // Menu Icon
                       GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _isNotificationDropdownOpen = false;
-                          });
-                        },
-                        child: Icon(Icons.close,
-                            size: 20, color: Colors.grey[600]),
+                        onTap: _showSideMenu,
+                        child: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Icon(Icons.menu, color: Colors.white, size: 24),
+                        ),
+                      ),
+
+                      // Greeting Text
+                      Expanded(
+                        child: Consumer<UserService>(
+                          builder: (context, userService, child) {
+                            final userName = userService.currentUser?.firstName ?? "User";
+                            return Column(
+                              children: [
+                                Text(
+                                  "Good morning,",
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w400,
+                                    color: Colors.white.withOpacity(0.9),
+                                  ),
+                                ),
+                                Text(
+                                  userName,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+
+                      // Notification Icon with counter and dropdown
+                      Padding(
+                        padding: EdgeInsets.only(left: 12),
+                        child: Builder(
+                          builder: (context) {
+                            final unreadCount = _notifications.where((notif) => notif["isNew"] == true).length;
+                            
+                            return Stack(
+                              children: [
+                                GestureDetector(
+                                  key: _notificationKey,
+                                  onTap: () {
+                                    setState(() {
+                                      _isNotificationDropdownOpen = !_isNotificationDropdownOpen;
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Icon(Icons.notifications,
+                                        color: Colors.white, size: 24),
+                                  ),
+                                ),
+                                if (unreadCount > 0)
+                                  Positioned(
+                                    right: 0,
+                                    top: 0,
+                                    child: Container(
+                                      padding: EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Text(
+                                        unreadCount.toString(),
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 12),
-                  // All/Unread Toggle
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(8),
+                  SizedBox(height: 16),
+                  
+                  // Quick Stats Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatCard("Available", "12", Icons.restaurant),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatCard("Donated", "8", Icons.favorite),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatCard("Saved", "24", Icons.savings),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Notification Dropdown
+            if (_isNotificationDropdownOpen)
+              Container(
+                margin: EdgeInsets.symmetric(horizontal: 16),
+                child: _buildNotificationDropdown(context, _notifications),
+              ),
+
+            // Quick Actions Section
+            Container(
+              margin: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Quick Actions",
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
                     ),
-                    child: Row(
+                  ),
+                  SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildActionCard(
+                          "Share Food",
+                          "Donate food to help others",
+                          Icons.add_circle,
+                          Colors.green,
+                          () {
+                            // Navigate to add food page
+                          },
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: _buildActionCard(
+                          "Find Food",
+                          "Discover nearby donations",
+                          Icons.search,
+                          Colors.blue,
+                          () {
+                            // Navigate to explore page
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Recent Donations Section
+            Expanded(
+              child: Container(
+                margin: EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _showAllNotifications = true;
-                              });
-                            },
-                            child: Container(
-                              padding: EdgeInsets.symmetric(vertical: 8),
-                              decoration: BoxDecoration(
-                                color: _showAllNotifications
-                                    ? Colors.amber[600]
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                "All",
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: _showAllNotifications
-                                      ? Colors.white
-                                      : Colors.grey[600],
-                                ),
-                              ),
-                            ),
+                        Text(
+                          "Recent Donations",
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
                           ),
                         ),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _showAllNotifications = false;
-                              });
-                            },
-                            child: Container(
-                              padding: EdgeInsets.symmetric(vertical: 8),
-                              decoration: BoxDecoration(
-                                color: !_showAllNotifications
-                                    ? Colors.amber[600]
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                "Unread",
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: !_showAllNotifications
-                                      ? Colors.white
-                                      : Colors.grey[600],
-                                ),
-                              ),
+                        Spacer(),
+                        GestureDetector(
+                          onTap: () {
+                            // Navigate to all donations
+                          },
+                          child: Text(
+                            "See All",
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.orange,
                             ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-            // Notifications list or empty state
-            Flexible(
-              child: filteredNotifications.isEmpty
-                  ? _buildEmptyNotificationState()
-                  : ListView(
-                      shrinkWrap: true,
-                      padding: EdgeInsets.zero,
-                      children: filteredNotifications
-                          .map((notif) => _buildNotificationDropdownItem(
-                                id: notif["id"],
-                                icon: notif["icon"],
-                                title: notif["title"],
-                                subtitle: notif["subtitle"],
-                                time: notif["time"],
-                                isNew: notif["isNew"],
-                              ))
-                          .toList(),
+                    SizedBox(height: 12),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: donations.length,
+                        itemBuilder: (context, index) {
+                          return _buildDonationCard(donations[index]);
+                        },
+                      ),
                     ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -434,39 +345,31 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildEmptyNotificationState() {
+  Widget _buildStatCard(String label, String value, IconData icon) {
     return Container(
-      padding: EdgeInsets.all(32),
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            _showAllNotifications
-                ? Icons.notifications_none
-                : Icons.mark_email_read,
-            size: 48,
-            color: Colors.grey[400],
-          ),
-          SizedBox(height: 16),
+          Icon(icon, color: Colors.white, size: 24),
+          SizedBox(height: 4),
           Text(
-            _showAllNotifications
-                ? "No notifications yet"
-                : "No unread notifications",
+            value,
             style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[600],
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
             ),
           ),
-          SizedBox(height: 8),
           Text(
-            _showAllNotifications
-                ? "We'll notify you when something important happens"
-                : "You're all caught up!",
-            textAlign: TextAlign.center,
+            label,
             style: GoogleFonts.poppins(
               fontSize: 12,
-              color: Colors.grey[500],
+              fontWeight: FontWeight.w400,
+              color: Colors.white.withOpacity(0.9),
             ),
           ),
         ],
@@ -474,91 +377,224 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildNotificationDropdownItem({
-    required int id,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required String time,
-    required bool isNew,
-  }) {
-    return InkWell(
-      onTap: () {
-        _markNotificationAsRead(id);
-      },
+  Widget _buildActionCard(String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isNew ? Colors.amber[50] : Colors.transparent,
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: EdgeInsets.all(8),
+              padding: EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isNew ? Colors.amber[100] : Colors.grey[100],
-                shape: BoxShape.circle,
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
-                icon,
-                color: isNew ? Colors.amber[800] : Colors.grey[600],
-                size: 18,
+              child: Icon(icon, color: color, size: 24),
+            ),
+            SizedBox(height: 12),
+            Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
               ),
             ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
+            SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDonationCard(Map<String, String> donation) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Food Image
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              image: DecorationImage(
+                image: NetworkImage(donation["img"]!),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          SizedBox(width: 16),
+          
+          // Content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  donation["name"]!,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  donation["food"]!,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.orange,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.location_on, color: Colors.grey[500], size: 14),
+                    SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        donation["address"]!,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.grey[600],
                         ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      if (isNew)
-                        Container(
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            "NEW",
-                            style: GoogleFonts.poppins(
-                              fontSize: 8,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      color: Colors.grey[600],
-                      height: 1.3,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          // Action Button
+          GestureDetector(
+            onTap: () {
+              // Handle donation action
+            },
+            child: Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.arrow_forward_ios, color: Colors.orange, size: 16),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSideMenu() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+        ),
+        child: Column(
+          children: [
+            // Handle bar
+            Container(
+              margin: EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Menu items
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                children: [
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.person,
+                    title: 'Profile',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => ProfilePage()),
+                      );
+                    },
                   ),
-                  SizedBox(height: 2),
-                  Text(
-                    time,
-                    style: GoogleFonts.poppins(
-                      fontSize: 10,
-                      color: Colors.grey[500],
-                    ),
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.favorite,
+                    title: 'Watchlist',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => WatchlistPage()),
+                      );
+                    },
+                  ),
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.list_alt,
+                    title: 'My Listings',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => ListingsPage()),
+                      );
+                    },
+                  ),
+                  _buildMenuItem(
+                    context,
+                    icon: Icons.info,
+                    title: 'About',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => AboutPage()),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -569,192 +605,255 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _showSideMenu() {
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: '',
-      barrierColor: Colors.black54,
-      transitionDuration: Duration(milliseconds: 300),
-      pageBuilder: (context, animation, secondaryAnimation) => Container(),
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: Offset(1.0, 0.0),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeInOut,
-          )),
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: Material(
-              color: Colors.white,
-              child: Container(
-                width: MediaQuery.of(context).size.width * 0.8,
-                height: MediaQuery.of(context).size.height,
-                child: Column(
-                  children: [
-                    // User Profile Section (matching the image)
-                    Container(
-                      padding: EdgeInsets.fromLTRB(20, 50, 20, 20),
-                      decoration: BoxDecoration(
-                        color: Colors.amber[700],
-                      ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 20,
-                            backgroundColor: Colors.white,
-                            child: Icon(Icons.person, color: Colors.grey[600], size: 24),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'User',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                Text(
-                                  'user@gmail.com',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    color: Colors.white.withOpacity(0.8),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: ListView(
-                        padding: EdgeInsets.zero,
-                        children: [
-                          // Home Section
-                          _buildMenuItemWithIcon(Icons.home_outlined, 'Home', () {
-                            Navigator.pop(context);
-                          }),
-                          
-                          // Activity Section Header
-                          Padding(
-                            padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
-                            child: Text(
-                              'ACTIVITY',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey[600],
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
-                          _buildMenuItemWithIcon(Icons.star_outline, 'My Watchlist', () {
-                            Navigator.pop(context);
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => WatchlistPage()));
-                          }),
-                          _buildMenuItemWithIcon(Icons.list_alt_outlined, 'My Listings', () {
-                            Navigator.pop(context);
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => ListingsPage()));
-                          }),
-
-                          // Settings Section Header
-                          Padding(
-                            padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
-                            child: Text(
-                              'SETTINGS',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey[600],
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
-                          _buildMenuItemWithIcon(Icons.person_outline, 'Profile', () {
-                            Navigator.pop(context);
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => ProfilePage()));
-                          }),
-                          _buildMenuItemWithIcon(Icons.notifications_outlined, 'Notification Settings', () {
-                            Navigator.pop(context);
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => NotificationPage()));
-                          }),
-                          _buildMenuItemWithIcon(Icons.help_outline, 'About', () {
-                            Navigator.pop(context);
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => AboutPage()));
-                          }),
-                          _buildMenuItemWithIcon(Icons.lock_outline, 'Change Password', () {
-                            Navigator.pop(context);
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => ChangePasswordPage()));
-                          }),
-                        ],
-                      ),
-                    ),
-                    // Sign Out Button
-                    Container(
-                      margin: EdgeInsets.all(20),
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          // Add sign out logic here
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey[800],
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.logout, size: 20),
-                            SizedBox(width: 8),
-                            Text(
-                              'Sign Out',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildMenuItemWithIcon(IconData icon, String title, VoidCallback onTap) {
+  Widget _buildMenuItem(BuildContext context, {
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
     return ListTile(
-      leading: Icon(icon, color: Colors.grey[700], size: 24),
+      leading: Container(
+        padding: EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.orange[50],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: Colors.orange[700], size: 24),
+      ),
       title: Text(
         title,
         style: GoogleFonts.poppins(
           fontSize: 16,
           fontWeight: FontWeight.w500,
-          color: Colors.grey[800],
+          color: Colors.black87,
         ),
       ),
-      trailing: Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 16),
       onTap: onTap,
-      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      trailing: Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 16),
+    );
+  }
+
+  Widget _buildNotificationDropdown(BuildContext context, List<Map<String, dynamic>> notifications) {
+    final filteredNotifications = _showAllNotifications
+        ? notifications
+        : notifications.where((notif) => notif["isNew"] == true).toList();
+
+    return Container(
+      width: MediaQuery.of(context).size.width - 32,
+      constraints: BoxConstraints(maxHeight: 400),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 20,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header
+          Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: Colors.grey[200]!, width: 1),
+              ),
+            ),
+            child: Row(
+              children: [
+                Text(
+                  'Notifications',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                Spacer(),
+                GestureDetector(
+                  onTap: _markAllAsRead,
+                  child: Text(
+                    'Mark all as read',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.orange,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Filter Tabs
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _showAllNotifications = true;
+                      });
+                    },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: _showAllNotifications ? Colors.orange : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        'All',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: _showAllNotifications ? FontWeight.w600 : FontWeight.w400,
+                          color: _showAllNotifications ? Colors.orange : Colors.grey[600],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _showAllNotifications = false;
+                      });
+                    },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: !_showAllNotifications ? Colors.orange : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        'Unread',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: !_showAllNotifications ? FontWeight.w600 : FontWeight.w400,
+                          color: !_showAllNotifications ? Colors.orange : Colors.grey[600],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Notifications List
+          Flexible(
+            child: filteredNotifications.isEmpty
+                ? Container(
+                    padding: EdgeInsets.all(32),
+                    child: Text(
+                      _showAllNotifications ? 'No notifications' : 'No unread notifications',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        color: Colors.grey[500],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: filteredNotifications.length,
+                    itemBuilder: (context, index) {
+                      final notification = filteredNotifications[index];
+                      return GestureDetector(
+                        onTap: () {
+                          _markNotificationAsRead(notification["id"]);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => NotificationPage(),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: notification["isNew"] ? Colors.orange[50] : Colors.white,
+                            border: Border(
+                              bottom: BorderSide(color: Colors.grey[100]!, width: 1),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange[100],
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Icon(
+                                  notification["icon"],
+                                  color: Colors.orange[700],
+                                  size: 20,
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      notification["title"],
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      notification["subtitle"],
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      notification["time"],
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 11,
+                                        color: Colors.grey[500],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (notification["isNew"])
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }
