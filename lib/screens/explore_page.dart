@@ -697,7 +697,7 @@ class _ExplorePageState extends State<ExplorePage> {
       elevation: 8,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        width: double.infinity,
+        width: 320,
         constraints: BoxConstraints(maxHeight: 400),
         decoration: BoxDecoration(
           color: Colors.white,

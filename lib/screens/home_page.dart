@@ -1,4 +1,3 @@
-// HomePage widget (donations list)
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -8,7 +7,7 @@ import 'watchlist_page.dart';
 import 'listings_page.dart';
 import 'profile_page.dart';
 import 'about_page.dart';
-
+import '../widgets/notification_dropdown.dart';
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
@@ -17,11 +16,10 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  bool _isNotificationDropdownOpen = false;
+  OverlayEntry? _notificationOverlayEntry;
   bool _showAllNotifications = true; // true for "All", false for "Unread"
   final GlobalKey _notificationKey = GlobalKey();
-  
-  // Notification data with state management
+
   List<Map<String, dynamic>> _notifications = [
     {
       "id": 1,
@@ -57,22 +55,61 @@ class _HomePageState extends State<HomePage> {
     },
   ];
 
-  void _markNotificationAsRead(int id) {
-    setState(() {
-      final index = _notifications.indexWhere((notif) => notif["id"] == id);
-      if (index != -1) {
-        _notifications[index]["isNew"] = false;
-      }
-    });
+
+  void _showNotificationOverlay() {
+    if (_notificationOverlayEntry != null) return;
+    final RenderBox renderBox = _notificationKey.currentContext!.findRenderObject() as RenderBox;
+    final Offset offset = renderBox.localToGlobal(Offset.zero);
+    final Size size = renderBox.size;
+
+    _notificationOverlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        left: offset.dx - 180 + size.width,
+        top: offset.dy + size.height + 8,
+        width: 320,
+        child: NotificationDropdown(
+          notifications: _notifications,
+          onMarkAllAsRead: () {
+            setState(() {
+              for (var notification in _notifications) {
+                notification["isNew"] = false;
+              }
+            });
+          },
+          onMarkAsRead: (id) {
+            setState(() {
+              final index = _notifications.indexWhere((notif) => notif["id"] == id);
+              if (index != -1) {
+                _notifications[index]["isNew"] = false;
+              }
+            });
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => NotificationPage()),
+            );
+            _hideNotificationOverlay();
+          },
+          iconKey: _notificationKey,
+          showAll: _showAllNotifications,
+          onToggleShowAll: (showAll) {
+            setState(() {
+              _showAllNotifications = showAll;
+            });
+          },
+          onClose: _hideNotificationOverlay,
+        ),
+      ),
+    );
+    Overlay.of(context, rootOverlay: true).insert(_notificationOverlayEntry!);
   }
 
-  void _markAllAsRead() {
-    setState(() {
-      for (var notification in _notifications) {
-        notification["isNew"] = false;
-      }
-    });
+  void _hideNotificationOverlay() {
+    _notificationOverlayEntry?.remove();
+    _notificationOverlayEntry = null;
   }
+
+
+
 
   final List<Map<String, String>> donations = [
     {
@@ -171,15 +208,16 @@ class _HomePageState extends State<HomePage> {
                         child: Builder(
                           builder: (context) {
                             final unreadCount = _notifications.where((notif) => notif["isNew"] == true).length;
-                            
                             return Stack(
                               children: [
                                 GestureDetector(
                                   key: _notificationKey,
                                   onTap: () {
-                                    setState(() {
-                                      _isNotificationDropdownOpen = !_isNotificationDropdownOpen;
-                                    });
+                                    if (_notificationOverlayEntry == null) {
+                                      _showNotificationOverlay();
+                                    } else {
+                                      _hideNotificationOverlay();
+                                    }
                                   },
                                   child: Container(
                                     padding: EdgeInsets.all(8),
@@ -240,12 +278,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
 
-            // Notification Dropdown
-            if (_isNotificationDropdownOpen)
-              Container(
-                margin: EdgeInsets.symmetric(horizontal: 16),
-                child: _buildNotificationDropdown(context, _notifications),
-              ),
+            // Notification Overlay is handled separately
 
             // Quick Actions Section
             Container(
@@ -632,228 +665,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildNotificationDropdown(BuildContext context, List<Map<String, dynamic>> notifications) {
-    final filteredNotifications = _showAllNotifications
-        ? notifications
-        : notifications.where((notif) => notif["isNew"] == true).toList();
 
-    return Container(
-      width: MediaQuery.of(context).size.width - 32,
-      constraints: BoxConstraints(maxHeight: 400),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Header
-          Container(
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: Colors.grey[200]!, width: 1),
-              ),
-            ),
-            child: Row(
-              children: [
-                Text(
-                  'Notifications',
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                Spacer(),
-                GestureDetector(
-                  onTap: _markAllAsRead,
-                  child: Text(
-                    'Mark all as read',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: Colors.orange,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Filter Tabs
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _showAllNotifications = true;
-                      });
-                    },
-                    child: Container(
-                      padding: EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: _showAllNotifications ? Colors.orange : Colors.transparent,
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                      child: Text(
-                        'All',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: _showAllNotifications ? FontWeight.w600 : FontWeight.w400,
-                          color: _showAllNotifications ? Colors.orange : Colors.grey[600],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _showAllNotifications = false;
-                      });
-                    },
-                    child: Container(
-                      padding: EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: !_showAllNotifications ? Colors.orange : Colors.transparent,
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                      child: Text(
-                        'Unread',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: !_showAllNotifications ? FontWeight.w600 : FontWeight.w400,
-                          color: !_showAllNotifications ? Colors.orange : Colors.grey[600],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Notifications List
-          Flexible(
-            child: filteredNotifications.isEmpty
-                ? Container(
-                    padding: EdgeInsets.all(32),
-                    child: Text(
-                      _showAllNotifications ? 'No notifications' : 'No unread notifications',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        color: Colors.grey[500],
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  )
-                : ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: filteredNotifications.length,
-                    itemBuilder: (context, index) {
-                      final notification = filteredNotifications[index];
-                      return GestureDetector(
-                        onTap: () {
-                          _markNotificationAsRead(notification["id"]);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => NotificationPage(),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: notification["isNew"] ? Colors.orange[50] : Colors.white,
-                            border: Border(
-                              bottom: BorderSide(color: Colors.grey[100]!, width: 1),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange[100],
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Icon(
-                                  notification["icon"],
-                                  color: Colors.orange[700],
-                                  size: 20,
-                                ),
-                              ),
-                              SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      notification["title"],
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      notification["subtitle"],
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      notification["time"],
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 11,
-                                        color: Colors.grey[500],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (notification["isNew"])
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+
+} // <-- Add this closing bracket to end the _HomePageState class

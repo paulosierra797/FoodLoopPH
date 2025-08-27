@@ -1,7 +1,7 @@
 // LandingPage widget
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'login_screen.dart';
+import 'enhanced_login_screen.dart';
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -141,7 +141,7 @@ class _LandingPageState extends State<LandingPage>
                     onPressed: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (context) => LoginScreen()),
+                        MaterialPageRoute(builder: (context) => EnhancedLoginScreen()),
                       );
                     },
                     child: Text(

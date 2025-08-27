@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'home_screen.dart';
-import '../services/user_service.dart';
+import 'enhanced_login_screen.dart';
+import '../services/auth_service.dart';
+import '../widgets/password_requirements_widget.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -14,7 +15,6 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
-  bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
@@ -26,6 +26,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
   bool _agreedToTerms = false;
+  bool _isPasswordValid = false;
 
   @override
   void dispose() {
@@ -40,61 +41,100 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   void _handleSignUp() async {
-    if (_formKey.currentState!.validate()) {
+    if (_formKey.currentState!.validate() && _isPasswordValid) {
       if (!_agreedToTerms) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  'You must agree to the Terms and Conditions and Privacy Policy to continue.')),
-        );
+        _showErrorMessage('You must agree to the Terms and Conditions and Privacy Policy to continue.');
         return;
       }
+      
       setState(() => _isLoading = true);
 
       try {
-        // Sign up user using UserService
-        final userService = Provider.of<UserService>(context, listen: false);
-        await userService.signUpUser(
-          firstName: _firstNameController.text,
-          lastName: _lastNameController.text,
-          username: _usernameController.text,
-          email: _emailController.text,
-          phoneNumber: _phoneController.text,
+        // Sign up user using AuthService
+        final authService = Provider.of<AuthService>(context, listen: false);
+        final result = await authService.register(
+          email: _emailController.text.trim(),
           password: _passwordController.text,
+          firstName: _firstNameController.text.trim(),
+          lastName: _lastNameController.text.trim(),
+          phone: _phoneController.text.trim(),
         );
 
         setState(() => _isLoading = false);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Account created successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (result.success) {
+          _showSuccessMessage(result.message);
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => HomeScreen()),
-        );
+          // Navigate to login screen for email verification
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => EnhancedLoginScreen()),
+          );
+        } else {
+          _showErrorMessage(result.message);
+        }
       } catch (e) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error creating account: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showErrorMessage('An unexpected error occurred. Please try again.');
       }
+    } else if (!_isPasswordValid) {
+      _showErrorMessage('Please ensure your password meets all requirements.');
+    } else {
+      _showErrorMessage('Please fill in all required fields.');
     }
+  }
+
+  void _showErrorMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.white),
+            SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.red[600],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        duration: Duration(seconds: 4),
+      ),
+    );
+  }
+
+  void _showSuccessMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.check_circle_outline, color: Colors.white),
+            SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.green[600],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        duration: Duration(seconds: 3),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: Center(
         child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 30, vertical: 40),
+          padding: EdgeInsets.symmetric(horizontal: 30, vertical: 20),
           child: Form(
             key: _formKey,
             child: Column(
@@ -136,7 +176,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
                     labelText: "Email",
-                    hintText: "Enter your email",
+                    hintText: "Enter your Gmail address",
                     prefixIcon: Icon(Icons.email_outlined, color: Colors.grey),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -158,8 +198,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
                     }
-                    if (!value.contains('@')) {
-                      return 'Please enter a valid email';
+                    if (!value.endsWith('@gmail.com')) {
+                      return 'Please enter a valid Gmail address (@gmail.com)';
+                    }
+                    if (!RegExp(r'^[a-zA-Z0-9._%+-]+@gmail\.com$').hasMatch(value)) {
+                      return 'Please enter a valid Gmail address';
                     }
                     return null;
                   },
@@ -170,6 +213,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     Expanded(
                       child: TextFormField(
                         controller: _firstNameController,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                        ],
                         decoration: InputDecoration(
                           labelText: "First name",
                           hintText: "Enter first name",
@@ -195,6 +241,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your first name';
                           }
+                          if (RegExp(r'[0-9]').hasMatch(value)) {
+                            return 'First name cannot contain numbers';
+                          }
+                          if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
+                            return 'First name can only contain letters';
+                          }
                           return null;
                         },
                       ),
@@ -203,6 +255,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     Expanded(
                       child: TextFormField(
                         controller: _lastNameController,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                        ],
                         decoration: InputDecoration(
                           labelText: "Last name",
                           hintText: "Enter last name",
@@ -227,6 +282,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your last name';
+                          }
+                          if (RegExp(r'[0-9]').hasMatch(value)) {
+                            return 'Last name cannot contain numbers';
+                          }
+                          if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
+                            return 'Last name can only contain letters';
                           }
                           return null;
                         },
@@ -309,50 +370,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   },
                 ),
                 SizedBox(height: 20),
-                TextFormField(
+                PasswordStrengthField(
                   controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  decoration: InputDecoration(
-                    labelText: "Password",
-                    hintText: "Create a password",
-                    prefixIcon: Icon(Icons.lock_outline, color: Colors.grey),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                        color: Colors.grey,
-                      ),
-                      onPressed: () =>
-                          setState(() => _obscurePassword = !_obscurePassword),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          BorderSide(color: Colors.amber[700]!, width: 2),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[50],
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    if (!value.contains(RegExp(r'[0-9]'))) {
-                      return 'Password must contain at least one number';
-                    }
-                    return null;
+                  labelText: "Password",
+                  hintText: "Create a password",
+                  showRequirements: true,
+                  onValidationChanged: (isValid) {
+                    setState(() {
+                      _isPasswordValid = isValid;
+                    });
                   },
                 ),
                 SizedBox(height: 8),
@@ -471,7 +497,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                       elevation: 2,
                     ),
-                    onPressed: _isLoading ? null : _handleSignUp,
+                    onPressed: (_isLoading || !_isPasswordValid) ? null : _handleSignUp,
                     child: _isLoading
                         ? SizedBox(
                             height: 24,

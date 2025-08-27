@@ -9,11 +9,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:foodloopph/main.dart';
+import 'package:foodloopph/services/user_service.dart';
+import 'package:foodloopph/services/notification_service.dart';
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(FoodLoopApp());
+    await tester.pumpWidget(FoodLoopApp(
+      userService: UserService(),
+      notificationService: NotificationService(),
+    ));
 
     // Verify that our counter starts at 0.
     expect(find.text('0'), findsOneWidget);
