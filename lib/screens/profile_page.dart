@@ -23,10 +23,9 @@ class _ProfilePageState extends State<ProfilePage> {
   final _birthController = TextEditingController();
   String _selectedGender = 'Male';
   File? _profileImage;
-  bool _isLoading = false;
-  List<String> _existingUsernames = [
+  final List<String> _existingUsernames = [
     'john_doe',
-    'maria_santos',
+    'carlos_santos',
     'admin',
     'user123'
   ]; // Simulated existing usernames
@@ -49,6 +48,15 @@ class _ProfilePageState extends State<ProfilePage> {
       _phoneController.text = user.phoneNumber;
       _birthController.text = user.birthDate ?? '';
       _selectedGender = user.gender ?? 'Male';
+    } else {
+      // Load sample user data as if from registration
+      _firstNameController.text = 'Juan';
+      _lastNameController.text = 'Dela Cruz';
+      _usernameController.text = 'juan_delacruz';
+      _emailController.text = 'juan.delacruz@example.com';
+      _phoneController.text = '+63 912 345 6789';
+      _birthController.text = '15/06/1995';
+      _selectedGender = 'Male';
     }
   }
 
@@ -241,7 +249,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                               Positioned(
                                 bottom: 0,
-                                left: 0,
+                                right: 0,
                                 child: GestureDetector(
                                   onTap: _pickImage,
                                   child: Container(

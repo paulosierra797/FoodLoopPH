@@ -1,342 +1,333 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'notification_page.dart';
-import 'watchlist_page.dart';
-import 'listings_page.dart';
-import 'profile_page.dart';
-import 'about_page.dart';
-import 'change_password_page.dart';
 
-class CommunityPage extends StatefulWidget {
-  const CommunityPage({Key? key}) : super(key: key);
+// Comment model
+class PostComment {
+  final String id;
+  final String author;
+  final String authorAvatar;
+  final String content;
+  final DateTime timestamp;
+  final Map<String, int> reactions;
 
-  @override
-  _CommunityPageState createState() => _CommunityPageState();
+  PostComment({
+    required this.id,
+    required this.author,
+    required this.authorAvatar,
+    required this.content,
+    required this.timestamp,
+    required this.reactions,
+  });
 }
 
-class _CommunityPageState extends State<CommunityPage> {
-  String _selectedCategory = 'All Categories';
-  bool _isNotificationDropdownOpen = false;
-  bool _showAllNotifications = true; // true for "All", false for "Unread"
-  final GlobalKey _notificationKey = GlobalKey();
-  
-  // State-managed notifications list
-  List<Map<String, dynamic>> _notifications = [
-    {
-      "id": 1,
-      "icon": Icons.forum,
-      "title": "New Community Post",
-      "subtitle": "Someone posted in Zero Waste category",
-      "time": "5 mins ago",
-      "isNew": true,
-    },
-    {
-      "id": 2,
-      "icon": Icons.thumb_up,
-      "title": "Post Liked",
-      "subtitle": "Maria liked your food waste tip",
-      "time": "30 mins ago",
-      "isNew": true,
-    },
-    {
-      "id": 3,
-      "icon": Icons.comment,
-      "title": "New Comment",
-      "subtitle": "Someone commented on your post",
-      "time": "2 hours ago",
-      "isNew": false,
-    },
-  ];
+// Post model to store post data
+class CommunityPost {
+  final String id;
+  final String author;
+  final String authorAvatar;
+  final String category;
+  final String content;
+  final List<String>? imagePaths;
+  final DateTime timestamp;
+  final Map<String, int> reactions;
+  final List<PostComment> comments;
+  String? userReaction;
 
-  // Notification management functions
-  void _markNotificationAsRead(int id) {
-    setState(() {
-      final index = _notifications.indexWhere((notif) => notif["id"] == id);
-      if (index != -1) {
-        _notifications[index]["isNew"] = false;
-      }
-    });
-  }
+  CommunityPost({
+    required this.id,
+    required this.author,
+    required this.authorAvatar,
+    required this.category,
+    required this.content,
+    this.imagePaths,
+    required this.timestamp,
+    required this.reactions,
+    required this.comments,
+    this.userReaction,
+  });
+}
 
-  void _markAllAsRead() {
-    setState(() {
-      for (var notification in _notifications) {
-        notification["isNew"] = false;
-      }
-    });
-  }
-  
-  // Sample community posts data
-  final List<Map<String, dynamic>> _posts = [
-    {
-      "id": 1,
-      "user": "Avani",
-      "category": "Zero Waste",
-      "timeAgo": "4 hours ago",
-      "badge": "Newbie",
-      "content": "Hello! I have expired extra virgin olive oil in a glass bottle. Please share your non-food use ideas in the comments...kinda stumped",
-      "comments": 10,
-      "likes": 15,
-      "isLiked": false,
-    },
-    {
-      "id": 2,
-      "user": "Chris",
-      "category": "Recipes",
-      "timeAgo": "10 hours ago",
-      "badge": null,
-      "content": "Would love to see some people's recipes what they have made from collections/donations and good budget ideas",
-      "comments": 5,
-      "likes": 23,
-      "isLiked": false,
-    },
-    {
-      "id": 3,
-      "user": "Eugene",
-      "category": "Zero Waste",
-      "timeAgo": "12 hours ago",
-      "badge": null,
-      "content": "Tips for reducing food waste at home? I always end up throwing away vegetables that I forget about in the fridge...",
-      "comments": 8,
-      "likes": 31,
-      "isLiked": true,
-    },
-    {
-      "id": 4,
-      "user": "Maria",
-      "category": "Tips",
-      "timeAgo": "1 day ago",
-      "badge": "Expert",
-      "content": "Just discovered that banana peels make excellent natural fertilizer! My plants are loving it 🌱",
-      "comments": 12,
-      "likes": 45,
-      "isLiked": false,
-    },
+class CommunityPageNew extends StatefulWidget {
+  const CommunityPageNew({super.key});
+
+  @override
+  _CommunityPageNewState createState() => _CommunityPageNewState();
+}
+
+class _CommunityPageNewState extends State<CommunityPageNew> {
+  String selectedCategory = 'All';
+
+  // Sample posts data with Facebook-style content
+  List<CommunityPost> posts = [
+    CommunityPost(
+      id: '1',
+      author: 'Carlos Santos',
+      authorAvatar: '�‍💼',
+      category: 'Zero Waste',
+      content:
+          'Creative ways to use vegetable scraps! 🌱\n\nI always end up with vegetable scraps and slightly wilted vegetables. Looking for creative recipes or preservation methods to reduce food waste!\n\n#ZeroWaste #FoodSafety #CommunityTips',
+      timestamp: DateTime.now().subtract(Duration(minutes: 30)),
+      reactions: {'👍': 15, '❤️': 8, '🌱': 12, '💡': 5},
+      comments: [
+        PostComment(
+          id: '1',
+          author: 'John Cruz',
+          authorAvatar: '👨‍💼',
+          content:
+              'Great question! I usually make vegetable broth with my scraps. Just save them in the freezer until you have enough!',
+          timestamp: DateTime.now().subtract(Duration(minutes: 20)),
+          reactions: {'👍': 3, '❤️': 1},
+        ),
+        PostComment(
+          id: '2',
+          author: 'Anna Lee',
+          authorAvatar: '👩‍🍳',
+          content:
+              'Try making veggie chips! Just dehydrate them in the oven at low temp. My kids love them!',
+          timestamp: DateTime.now().subtract(Duration(minutes: 15)),
+          reactions: {'👍': 2, '🔥': 1},
+        ),
+      ],
+    ),
+    CommunityPost(
+      id: '2',
+      author: 'John Cruz',
+      authorAvatar: '👨‍💼',
+      category: 'Food Safety',
+      content:
+          'Best practices for food sharing 🔒\n\nWhat are the most important food safety guidelines we should follow when donating or receiving food through community sharing? Let\'s discuss and keep our community safe! 🛡️',
+      imagePaths: [
+        'https://images.unsplash.com/photo-1556909114-3e5caf136de9?w=400'
+      ],
+      timestamp: DateTime.now().subtract(Duration(hours: 2)),
+      reactions: {'👍': 23, '🔒': 10, '❤️': 6},
+      comments: [
+        PostComment(
+          id: '3',
+          author: 'Dr. Santos',
+          authorAvatar: '👨‍⚕️',
+          content:
+              'Very important topic! Always check expiry dates, proper storage temperature, and avoid dairy/meat products unless you\'re 100% sure about the source.',
+          timestamp: DateTime.now().subtract(Duration(hours: 1)),
+          reactions: {'👍': 5, '💯': 2},
+        ),
+      ],
+    ),
+    CommunityPost(
+      id: '3',
+      author: 'Chef Miguel',
+      authorAvatar: '👨‍🍳',
+      category: 'Recipes',
+      content:
+          'Leftover rice transformed! 🍚✨\n\nTurned yesterday\'s plain rice into delicious fried rice with some leftover vegetables. Zero waste cooking at its finest! Who else loves transforming leftovers? Share your tips below! 👇',
+      imagePaths: [
+        'https://images.unsplash.com/photo-1563379091339-03246963d49a?w=400',
+        'https://images.unsplash.com/photo-1512003867696-6d5ce6835040?w=400'
+      ],
+      timestamp: DateTime.now().subtract(Duration(hours: 4)),
+      reactions: {'😍': 32, '🤤': 18, '👍': 25, '🔥': 12},
+      comments: [
+        PostComment(
+          id: '4',
+          author: 'Carlos Santos',
+          authorAvatar: '�‍💼',
+          content: 'Looks amazing! Recipe please? 😍 I have leftover rice too!',
+          timestamp: DateTime.now().subtract(Duration(hours: 3)),
+          reactions: {'👍': 8, '❤️': 3},
+        ),
+      ],
+    ),
   ];
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        automaticallyImplyLeading: false,
-        title: Row(
-          children: [
-            Text(
-              'Community',
-              style: GoogleFonts.poppins(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            Spacer(),
-            // Notification Icon with counter and dropdown
-            Padding(
-              padding: EdgeInsets.only(right: 12),
-              child: Builder(
-                builder: (context) {
-                  final unreadCount = _notifications.where((notif) => notif["isNew"] == true).length;
-                  
-                  return Stack(
-                    children: [
-                      GestureDetector(
-                        key: _notificationKey,
-                        onTap: () {
-                          setState(() {
-                            _isNotificationDropdownOpen = !_isNotificationDropdownOpen;
-                          });
-                        },
-                        child: Container(
-                          padding: EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: _isNotificationDropdownOpen
-                                ? Colors.black.withOpacity(0.1)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Icon(Icons.notifications,
-                              size: 26,
-                              color: _isNotificationDropdownOpen
-                                  ? Colors.black87
-                                  : Colors.black),
-                        ),
-                      ),
-                      // Notification Counter Badge
-                      if (unreadCount > 0)
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            padding: EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                            constraints: BoxConstraints(
-                              minWidth: 18,
-                              minHeight: 18,
-                            ),
-                            child: Text(
-                              unreadCount > 99 ? '99+' : unreadCount.toString(),
-                              style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                      if (_isNotificationDropdownOpen)
-                        Positioned(
-                          top: 40,
-                          right: 0,
-                          child: _buildNotificationDropdown(context, _notifications),
-                        ),
-                    ],
-                  );
-                },
-              ),
-            ),
-            // Menu Icon
-            GestureDetector(
-              onTap: () {
-                _showSideMenu();
-              },
-              child: Container(
-                padding: EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Colors.transparent,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Icon(
-                  Icons.menu,
-                  size: 26,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      body: Column(
+    return Container(
+      color: Colors.grey[100],
+      child: Column(
         children: [
-          // Forum Header Section
+          // Header section with smaller sorting
           Container(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
               children: [
                 Text(
-                  'Forum',
+                  'Community',
                   style: GoogleFonts.poppins(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
                   ),
                 ),
-                SizedBox(height: 16),
-                Row(
-                  children: [
-                    // Category Dropdown
-                    GestureDetector(
-                      onTap: _showCategoryPicker,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey[300]!),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _selectedCategory,
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            Icon(Icons.keyboard_arrow_down, size: 20),
-                          ],
-                        ),
-                      ),
+                Spacer(),
+                // Create Post Button
+                GestureDetector(
+                  onTap: () => _showCreatePostDialog(),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[600],
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    Spacer(),
-                    // View FAQs Button
-                    GestureDetector(
-                      onTap: () {
-                        // Navigate to FAQs
-                        _showFAQs();
-                      },
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.black87),
-                          borderRadius: BorderRadius.circular(25),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add, color: Colors.white, size: 16),
+                        SizedBox(width: 4),
+                        Text(
+                          'Post',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'View FAQs',
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            Icon(Icons.help_outline, size: 18),
-                          ],
-                        ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
           ),
-          
-          // Posts Feed
+
+          // Category Filter Dropdown
+          Container(
+            height: 50,
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: Colors.white,
+            child: Row(
+              children: [
+                Text(
+                  'Filter by: ',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                Expanded(
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: selectedCategory,
+                      isExpanded: true,
+                      icon: Icon(Icons.keyboard_arrow_down,
+                          color: Colors.orange[600]),
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: Colors.grey[800],
+                      ),
+                      items: [
+                        'All',
+                        'Zero Waste',
+                        'Food Safety',
+                        'Recipes',
+                        'General',
+                        'Tips'
+                      ].map((String category) {
+                        return DropdownMenuItem<String>(
+                          value: category,
+                          child: Text(category),
+                        );
+                      }).toList(),
+                      onChanged: (String? newCategory) {
+                        setState(() {
+                          selectedCategory = newCategory ?? 'All';
+                        });
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // "What's on your mind?" Create Post Section
+          Container(
+            margin: EdgeInsets.all(12),
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.orange[100],
+                  child: Text('👤', style: TextStyle(fontSize: 16)),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _showCreatePostDialog(),
+                    child: Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      child: Text(
+                        "What's on your mind?",
+                        style: GoogleFonts.poppins(
+                          color: Colors.grey[600],
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 12),
+                IconButton(
+                  icon: Icon(Icons.photo_library, color: Colors.orange[600]),
+                  onPressed: () => _showCreatePostDialog(),
+                ),
+              ],
+            ),
+          ),
+
+          // Posts List
           Expanded(
             child: ListView.builder(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _posts.length,
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              itemCount: posts.length,
               itemBuilder: (context, index) {
-                final post = _posts[index];
-                return _buildPostCard(post);
+                return _buildFacebookStylePost(posts[index]);
               },
             ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _showCreatePost();
-        },
-        backgroundColor: Colors.amber[700],
-        child: Icon(Icons.add, color: Colors.white),
-      ),
     );
   }
 
-  Widget _buildPostCard(Map<String, dynamic> post) {
+  // Facebook-style post widget
+  Widget _buildFacebookStylePost(CommunityPost post) {
     return Container(
-      margin: EdgeInsets.only(bottom: 16),
-      padding: EdgeInsets.all(16),
+      margin: EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 8,
+            blurRadius: 4,
             offset: Offset(0, 2),
           ),
         ],
@@ -345,306 +336,324 @@ class _CommunityPageState extends State<CommunityPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Post Header
-          Row(
-            children: [
-              // User Avatar
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.blue[100],
-                  shape: BoxShape.circle,
+          Padding(
+            padding: EdgeInsets.all(16),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.orange[100],
+                  child:
+                      Text(post.authorAvatar, style: TextStyle(fontSize: 16)),
                 ),
-                child: Icon(
-                  Icons.person,
-                  color: Colors.blue[300],
-                  size: 24,
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          post['user'],
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        post.author,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
                         ),
-                        SizedBox(width: 8),
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            post['category'],
+                      ),
+                      Row(
+                        children: [
+                          Text(
+                            _formatTimeAgo(post.timestamp),
                             style: GoogleFonts.poppins(
                               fontSize: 12,
                               color: Colors.grey[600],
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
-                        SizedBox(width: 4),
-                        Text(
-                          post['timeAgo'],
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                        if (post['badge'] != null) ...[
+                          SizedBox(width: 4),
+                          Icon(Icons.public, size: 12, color: Colors.grey[600]),
                           SizedBox(width: 8),
                           Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: post['badge'] == 'Expert' ? Colors.green[100] : Colors.amber[100],
-                              borderRadius: BorderRadius.circular(12),
+                              color: Colors.orange[100],
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(post['badge'] == 'Expert' ? '⭐' : '👑', style: TextStyle(fontSize: 10)),
-                                SizedBox(width: 4),
-                                Text(
-                                  post['badge'],
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w500,
-                                    color: post['badge'] == 'Expert' ? Colors.green[700] : Colors.amber[700],
-                                  ),
-                                ),
-                              ],
+                            child: Text(
+                              post.category,
+                              style: GoogleFonts.poppins(
+                                fontSize: 10,
+                                color: Colors.orange[700],
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                         ],
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.bookmark_border, color: Colors.grey[400], size: 20),
-            ],
-          ),
-          
-          SizedBox(height: 12),
-          
-          // Post Content
-          Text(
-            post['content'],
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              color: Colors.black87,
-              height: 1.4,
-            ),
-          ),
-          
-          SizedBox(height: 16),
-          
-          // Post Actions
-          Row(
-            children: [
-              GestureDetector(
-                onTap: () => _openComments(post),
-                child: Row(
-                  children: [
-                    Icon(Icons.chat_bubble_outline, size: 18, color: Colors.grey[600]),
-                    SizedBox(width: 6),
-                    Text(
-                      '${post['comments']} comments',
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: Colors.grey[600],
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: 24),
-              GestureDetector(
-                onTap: () => _toggleLike(post['id']),
-                child: Row(
-                  children: [
-                    Icon(
-                      post['isLiked'] == true ? Icons.favorite : Icons.favorite_border, 
-                      size: 18, 
-                      color: post['isLiked'] == true ? Colors.red : Colors.grey[600]
-                    ),
-                    SizedBox(width: 6),
-                    Text(
-                      '${post['likes']} likes',
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showCategoryPicker() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
-      builder: (context) => Container(
-        padding: EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Select Category',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 20),
-            ...['All Categories', 'Zero Waste', 'Recipes', 'Tips', 'General'].map((category) => 
-              ListTile(
-                title: Text(category),
-                onTap: () {
-                  setState(() {
-                    _selectedCategory = category;
-                  });
-                  Navigator.pop(context);
-                },
-                selected: _selectedCategory == category,
-              )
-            ).toList(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showFAQs() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Frequently Asked Questions'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Q: How do I post in the community?', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('A: Tap the + button to create a new post.\n'),
-              Text('Q: What categories are available?', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('A: Zero Waste, Recipes, Tips, and General.\n'),
-              Text('Q: How do I earn badges?', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('A: Badges are earned through community participation and helpful contributions.'),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showCreatePost() {
-    final TextEditingController contentController = TextEditingController();
-    String selectedCategory = 'Zero Waste';
-    
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(
-            'Create New Post',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<String>(
-                  value: selectedCategory,
-                  decoration: InputDecoration(
-                    labelText: 'Category',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ],
                   ),
-                  items: ['Zero Waste', 'Recipes', 'Tips', 'General']
-                      .map((category) => DropdownMenuItem(
-                            value: category,
-                            child: Text(category),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    setDialogState(() {
-                      selectedCategory = value!;
-                    });
-                  },
                 ),
-                SizedBox(height: 16),
-                TextField(
-                  controller: contentController,
-                  maxLines: 5,
-                  decoration: InputDecoration(
-                    labelText: 'What\'s on your mind?',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    hintText: 'Share your thoughts with the community...',
+                PopupMenuButton(
+                  icon: Icon(Icons.more_horiz, color: Colors.grey[600]),
+                  itemBuilder: (context) => [
+                    PopupMenuItem(child: Text('Edit Post')),
+                    PopupMenuItem(child: Text('Delete Post')),
+                    PopupMenuItem(child: Text('Hide Post')),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Post Content
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              post.content,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.black87,
+                height: 1.4,
+              ),
+            ),
+          ),
+
+          // Post Images
+          if (post.imagePaths != null && post.imagePaths!.isNotEmpty) ...[
+            SizedBox(height: 12),
+            SizedBox(
+              height: post.imagePaths!.length == 1 ? 200 : 150,
+              child: post.imagePaths!.length == 1
+                  ? Container(
+                      width: double.infinity,
+                      margin: EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.grey[200],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          post.imagePaths![0],
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[200],
+                              child: Center(
+                                child: Icon(Icons.image,
+                                    color: Colors.grey[400], size: 50),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: post.imagePaths!.length,
+                      itemBuilder: (context, index) {
+                        return Container(
+                          width: 120,
+                          margin: EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            color: Colors.grey[200],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              post.imagePaths![index],
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Colors.grey[200],
+                                  child: Center(
+                                    child: Icon(Icons.image,
+                                        color: Colors.grey[400], size: 30),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+
+          SizedBox(height: 12),
+
+          // Reaction Summary
+          if (post.reactions.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  // Reaction Icons
+                  ...post.reactions.entries.take(3).map(
+                        (entry) => Container(
+                          margin: EdgeInsets.only(right: 2),
+                          child:
+                              Text(entry.key, style: TextStyle(fontSize: 16)),
+                        ),
+                      ),
+                  SizedBox(width: 6),
+                  Text(
+                    '${post.reactions.values.reduce((a, b) => a + b)}',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  Spacer(),
+                  if (post.comments.isNotEmpty)
+                    Text(
+                      '${post.comments.length} comments',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+          SizedBox(height: 8),
+          Divider(height: 1, color: Colors.grey[200]),
+
+          // Action Buttons with Hover Reactions
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(
+              children: [
+                Expanded(child: _buildReactionButton(post)),
+                Expanded(child: _buildCommentButton(post)),
+              ],
+            ),
+          ),
+
+          // Comments Section
+          if (post.comments.isNotEmpty) ...[
+            Divider(height: 1, color: Colors.grey[200]),
+            ...post.comments
+                .take(2)
+                .map((comment) => _buildCommentWidget(comment)),
+            if (post.comments.length > 2)
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: GestureDetector(
+                  onTap: () => _showAllComments(post),
+                  child: Text(
+                    'View ${post.comments.length - 2} more comments',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+
+          // Add Comment Section
+          Container(
+            padding: EdgeInsets.all(12),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Colors.grey[200],
+                  child: Text('👤', style: TextStyle(fontSize: 12)),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _showCommentDialog(post),
+                    child: Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'Write a comment...',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel'),
+        ],
+      ),
+    );
+  }
+
+  // Facebook-style reaction button with hover effect
+  Widget _buildReactionButton(CommunityPost post) {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          MouseRegion(
+            onEnter: (_) => _showReactionPicker(post),
+            child: GestureDetector(
+              onLongPress: () => _showReactionPicker(post),
+              onTap: () => _handleReaction(post, '👍'),
+              child: Row(
+                children: [
+                  Icon(
+                    post.userReaction != null
+                        ? Icons.thumb_up
+                        : Icons.thumb_up_outlined,
+                    size: 18,
+                    color: post.userReaction != null
+                        ? Colors.orange[600]
+                        : Colors.grey[600],
+                  ),
+                  SizedBox(width: 6),
+                  Text(
+                    post.userReaction ?? 'Like',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: post.userReaction != null
+                          ? Colors.orange[600]
+                          : Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            ElevatedButton(
-              onPressed: () {
-                if (contentController.text.isNotEmpty) {
-                  setState(() {
-                    _posts.insert(0, {
-                      "id": _posts.length + 1,
-                      "user": "You",
-                      "category": selectedCategory,
-                      "timeAgo": "now",
-                      "badge": null,
-                      "content": contentController.text,
-                      "comments": 0,
-                      "likes": 0,
-                      "isLiked": false,
-                    });
-                  });
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Post created successfully!')),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.amber[700]),
-              child: Text('Post', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCommentButton(CommunityPost post) {
+    return GestureDetector(
+      onTap: () => _showCommentDialog(post),
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.chat_bubble_outline, size: 18, color: Colors.grey[600]),
+            SizedBox(width: 6),
+            Text(
+              'Comment',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
@@ -652,690 +661,414 @@ class _CommunityPageState extends State<CommunityPage> {
     );
   }
 
-  void _openComments(Map<String, dynamic> post) {
-    final TextEditingController commentController = TextEditingController();
-    List<Map<String, dynamic>> comments = [
-      {
-        "user": "Sarah",
-        "content": "Great post! Thanks for sharing.",
-        "timeAgo": "2 hours ago",
-        "likes": 3,
-        "isLiked": false,
-      },
-      {
-        "user": "Mike",
-        "content": "I completely agree with this approach.",
-        "timeAgo": "1 hour ago",
-        "likes": 1,
-        "isLiked": true,
-      },
-    ];
+  Widget _buildCommentWidget(PostComment comment) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: Colors.grey[200],
+            child: Text(comment.authorAvatar, style: TextStyle(fontSize: 12)),
+          ),
+          SizedBox(width: 8),
+          Expanded(
+            child: Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    comment.author,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  Text(
+                    comment.content,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
+  String _formatTimeAgo(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+
+    if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h';
+    } else {
+      return '${difference.inDays}d';
+    }
+  }
+
+  void _showCreatePostDialog() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setBottomSheetState) => DraggableScrollableSheet(
-          initialChildSize: 0.8,
-          minChildSize: 0.5,
-          maxChildSize: 0.95,
-          builder: (context, scrollController) => Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
-            ),
-            child: Column(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Text(
-                        'Comments',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Spacer(),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: Icon(Icons.close),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    controller: scrollController,
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: comments.length,
-                    itemBuilder: (context, index) {
-                      final comment = comments[index];
-                      return Container(
-                        margin: EdgeInsets.only(bottom: 16),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: Colors.blue[100],
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(Icons.person, color: Colors.blue[300], size: 20),
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    comment['user'],
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  Text(comment['content']),
-                                  SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        comment['timeAgo'],
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                      SizedBox(width: 16),
-                                      GestureDetector(
-                                        onTap: () {
-                                          setBottomSheetState(() {
-                                            comment['isLiked'] = !comment['isLiked'];
-                                            comment['likes'] += comment['isLiked'] ? 1 : -1;
-                                          });
-                                        },
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              comment['isLiked'] ? Icons.favorite : Icons.favorite_border,
-                                              size: 14,
-                                              color: comment['isLiked'] ? Colors.red : Colors.grey[500],
-                                            ),
-                                            SizedBox(width: 4),
-                                            Text(
-                                              '${comment['likes']}',
-                                              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
+      builder: (context) => CreatePostBottomSheet(),
+    );
+  }
+
+  void _showReactionPicker(CommunityPost post) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(25),
+            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10)],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: ['👍', '❤️', '😂', '😮', '😢', '😡']
+                .map(
+                  (emoji) => GestureDetector(
+                    onTap: () {
+                      _handleReaction(post, emoji);
+                      Navigator.pop(context);
                     },
+                    child: Container(
+                      padding: EdgeInsets.all(8),
+                      child: Text(emoji, style: TextStyle(fontSize: 20)),
+                    ),
                   ),
-                ),
-                Container(
-                  padding: EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border(top: BorderSide(color: Colors.grey[200]!)),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: commentController,
-                          decoration: InputDecoration(
-                            hintText: 'Write a comment...',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      IconButton(
-                        onPressed: () {
-                          if (commentController.text.isNotEmpty) {
-                            setBottomSheetState(() {
-                              comments.add({
-                                "user": "You",
-                                "content": commentController.text,
-                                "timeAgo": "now",
-                                "likes": 0,
-                                "isLiked": false,
-                              });
-                              commentController.clear();
-                            });
-                            // Update post comment count
-                            setState(() {
-                              final postIndex = _posts.indexWhere((p) => p['id'] == post['id']);
-                              if (postIndex != -1) {
-                                _posts[postIndex]['comments']++;
-                              }
-                            });
-                          }
-                        },
-                        icon: Icon(Icons.send, color: Colors.amber[700]),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+                )
+                .toList(),
           ),
         ),
       ),
     );
   }
 
-  void _toggleLike(int postId) {
+  void _handleReaction(CommunityPost post, String reaction) {
     setState(() {
-      final postIndex = _posts.indexWhere((post) => post['id'] == postId);
-      if (postIndex != -1) {
-        final post = _posts[postIndex];
-        post['isLiked'] = !post['isLiked'];
-        post['likes'] += post['isLiked'] ? 1 : -1;
+      if (post.userReaction == reaction) {
+        post.userReaction = null;
+        if (post.reactions[reaction] != null && post.reactions[reaction]! > 0) {
+          post.reactions[reaction] = post.reactions[reaction]! - 1;
+        }
+      } else {
+        if (post.userReaction != null) {
+          if (post.reactions[post.userReaction!] != null &&
+              post.reactions[post.userReaction!]! > 0) {
+            post.reactions[post.userReaction!] =
+                post.reactions[post.userReaction!]! - 1;
+          }
+        }
+        post.userReaction = reaction;
+        post.reactions[reaction] = (post.reactions[reaction] ?? 0) + 1;
       }
     });
   }
 
-  void _showSideMenu() {
-    showGeneralDialog(
+  void _showCommentDialog(CommunityPost post) {
+    final commentController = TextEditingController();
+    showModalBottomSheet(
       context: context,
-      barrierDismissible: true,
-      barrierLabel: '',
-      barrierColor: Colors.black54,
-      transitionDuration: Duration(milliseconds: 300),
-      pageBuilder: (context, animation, secondaryAnimation) => Container(),
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: Offset(1.0, 0.0),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeInOut,
-          )),
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: Material(
-              color: Colors.white,
-              child: Container(
-                width: MediaQuery.of(context).size.width * 0.8,
-                height: MediaQuery.of(context).size.height,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Comments',
+                style: GoogleFonts.poppins(
+                    fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: post.comments.length,
+                itemBuilder: (context, index) =>
+                    _buildCommentWidget(post.comments[index]),
+              ),
+            ),
+            Container(
+              padding: EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: commentController,
+                      decoration: InputDecoration(
+                        hintText: 'Write a comment...',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(25)),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  IconButton(
+                    onPressed: () {
+                      if (commentController.text.isNotEmpty) {
+                        setState(() {
+                          post.comments.add(PostComment(
+                            id: DateTime.now()
+                                .millisecondsSinceEpoch
+                                .toString(),
+                            author: 'You',
+                            authorAvatar: '👤',
+                            content: commentController.text,
+                            timestamp: DateTime.now(),
+                            reactions: {},
+                          ));
+                        });
+                        commentController.clear();
+                        Navigator.pop(context);
+                      }
+                    },
+                    icon: Icon(Icons.send, color: Colors.orange[600]),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAllComments(CommunityPost post) {
+    _showCommentDialog(post);
+  }
+}
+
+// Create Post Bottom Sheet
+class CreatePostBottomSheet extends StatefulWidget {
+  const CreatePostBottomSheet({super.key});
+
+  @override
+  _CreatePostBottomSheetState createState() => _CreatePostBottomSheetState();
+}
+
+class _CreatePostBottomSheetState extends State<CreatePostBottomSheet> {
+  final TextEditingController _contentController = TextEditingController();
+  String selectedCategory = 'General';
+  List<String> selectedImages = [];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.8,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Column(
+          children: [
+            // Handle bar
+            Container(
+              margin: EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            // Header
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  Text(
+                    'Create Post',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Spacer(),
+                  TextButton(
+                    onPressed: () {
+                      if (_contentController.text.isNotEmpty) {
+                        // Handle post creation
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Post created successfully!')),
+                        );
+                      }
+                      Navigator.pop(context);
+                    },
+                    child: Text(
+                      'Post',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.orange[600],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            Divider(),
+
+            // User Info
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Colors.orange[100],
+                    child: Text('👤', style: TextStyle(fontSize: 16)),
+                  ),
+                  SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'You',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      DropdownButton<String>(
+                        value: selectedCategory,
+                        underline: SizedBox(),
+                        items: [
+                          'General',
+                          'Zero Waste',
+                          'Food Safety',
+                          'Recipes',
+                          'Tips'
+                        ]
+                            .map((category) => DropdownMenuItem(
+                                  value: category,
+                                  child: Text(
+                                    category,
+                                    style: GoogleFonts.poppins(fontSize: 12),
+                                  ),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedCategory = value!;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Content Input
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    // User Profile Section (matching the image)
-                    Container(
-                      padding: EdgeInsets.fromLTRB(20, 50, 20, 20),
-                      decoration: BoxDecoration(
-                        color: Colors.amber[700],
+                    Expanded(
+                      child: TextField(
+                        controller: _contentController,
+                        maxLines: null,
+                        expands: true,
+                        decoration: InputDecoration(
+                          hintText: "What's on your mind?",
+                          hintStyle: GoogleFonts.poppins(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                          ),
+                          border: InputBorder.none,
+                        ),
+                        style: GoogleFonts.poppins(fontSize: 16),
                       ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 20,
-                            backgroundColor: Colors.white,
-                            child: Icon(Icons.person, color: Colors.grey[600], size: 24),
+                    ),
+
+                    // Image Upload Section
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: _selectImage,
+                          icon: Icon(Icons.photo_library,
+                              color: Colors.orange[600]),
+                        ),
+                        IconButton(
+                          onPressed: _selectImage,
+                          icon:
+                              Icon(Icons.camera_alt, color: Colors.orange[600]),
+                        ),
+                        if (selectedImages.isNotEmpty) ...[
+                          SizedBox(width: 12),
+                          Text(
+                            '${selectedImages.length} photo(s) selected',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
                           ),
                           SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'User',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                Text(
-                                  'user@gmail.com',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    color: Colors.white.withOpacity(0.8),
-                                  ),
-                                ),
-                              ],
-                            ),
+                          IconButton(
+                            onPressed: () {
+                              setState(() {
+                                selectedImages.clear();
+                              });
+                            },
+                            icon: Icon(Icons.close, color: Colors.red),
                           ),
-                          Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
                         ],
-                      ),
-                    ),
-                    Expanded(
-                      child: ListView(
-                        padding: EdgeInsets.zero,
-                        children: [
-                          // Home Section
-                          _buildMenuItemWithIcon(Icons.home_outlined, 'Home', () {
-                            Navigator.pop(context);
-                            Navigator.pushReplacementNamed(context, '/home');
-                          }),
-                          
-                          // Activity Section Header
-                          Padding(
-                            padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
-                            child: Text(
-                              'ACTIVITY',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey[600],
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
-                          _buildMenuItemWithIcon(Icons.star_outline, 'My Watchlist', () {
-                            Navigator.pop(context);
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => WatchlistPage()));
-                          }),
-                          _buildMenuItemWithIcon(Icons.list_alt_outlined, 'My Listings', () {
-                            Navigator.pop(context);
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => ListingsPage()));
-                          }),
-
-                          // Settings Section Header
-                          Padding(
-                            padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
-                            child: Text(
-                              'SETTINGS',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey[600],
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
-                          _buildMenuItemWithIcon(Icons.person_outline, 'Profile', () {
-                            Navigator.pop(context);
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => ProfilePage()));
-                          }),
-                          _buildMenuItemWithIcon(Icons.notifications_outlined, 'Notification Settings', () {
-                            Navigator.pop(context);
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => NotificationPage()));
-                          }),
-                          _buildMenuItemWithIcon(Icons.help_outline, 'About', () {
-                            Navigator.pop(context);
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => AboutPage()));
-                          }),
-                          _buildMenuItemWithIcon(Icons.lock_outline, 'Change Password', () {
-                            Navigator.pop(context);
-                            Navigator.push(context, MaterialPageRoute(builder: (context) => ChangePasswordPage()));
-                          }),
-                        ],
-                      ),
-                    ),
-                    // Sign Out Button
-                    Container(
-                      margin: EdgeInsets.all(20),
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          // Add sign out logic here
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey[800],
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.logout, size: 20),
-                            SizedBox(width: 8),
-                            Text(
-                              'Sign Out',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      ],
                     ),
                   ],
                 ),
               ),
             ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildMenuItemWithIcon(IconData icon, String title, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.grey[700], size: 24),
-      title: Text(
-        title,
-        style: GoogleFonts.poppins(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-          color: Colors.grey[800],
-        ),
-      ),
-      trailing: Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 16),
-      onTap: onTap,
-      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-    );
-  }
-
-  Widget _buildNotificationDropdown(BuildContext context, List<Map<String, dynamic>> allNotifications) {
-    final filteredNotifications = _showAllNotifications
-        ? allNotifications
-        : allNotifications.where((notif) => notif["isNew"] == true).toList();
-
-    return Material(
-      elevation: 8,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 320,
-        constraints: BoxConstraints(maxHeight: 400),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[300]!),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header with toggle
-            Container(
-              padding: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        "Notifications",
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      Spacer(),
-                      GestureDetector(
-                        onTap: _markAllAsRead,
-                        child: Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          child: Text(
-                            "Mark all read",
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: Colors.blue[600],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _isNotificationDropdownOpen = false;
-                          });
-                        },
-                        child: Icon(Icons.close,
-                            size: 20, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 12),
-                  // All/Unread Toggle
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _showAllNotifications = true;
-                              });
-                            },
-                            child: Container(
-                              padding: EdgeInsets.symmetric(vertical: 8),
-                              decoration: BoxDecoration(
-                                color: _showAllNotifications
-                                    ? Colors.amber[600]
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                "All",
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: _showAllNotifications
-                                      ? Colors.white
-                                      : Colors.grey[600],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _showAllNotifications = false;
-                              });
-                            },
-                            child: Container(
-                              padding: EdgeInsets.symmetric(vertical: 8),
-                              decoration: BoxDecoration(
-                                color: !_showAllNotifications
-                                    ? Colors.amber[600]
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                "Unread",
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: !_showAllNotifications
-                                      ? Colors.white
-                                      : Colors.grey[600],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Notifications list or empty state
-            Flexible(
-              child: filteredNotifications.isEmpty
-                  ? _buildEmptyNotificationState()
-                  : ListView(
-                      shrinkWrap: true,
-                      padding: EdgeInsets.zero,
-                      children: filteredNotifications
-                          .map((notif) => _buildNotificationDropdownItem(
-                                id: notif["id"],
-                                icon: notif["icon"],
-                                title: notif["title"],
-                                subtitle: notif["subtitle"],
-                                time: notif["time"],
-                                isNew: notif["isNew"],
-                              ))
-                          .toList(),
-                    ),
-            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildEmptyNotificationState() {
-    return Container(
-      padding: EdgeInsets.all(32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            _showAllNotifications
-                ? Icons.notifications_none
-                : Icons.mark_email_read,
-            size: 48,
-            color: Colors.grey[400],
-          ),
-          SizedBox(height: 16),
-          Text(
-            _showAllNotifications
-                ? "No notifications yet"
-                : "No unread notifications",
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[600],
-            ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            _showAllNotifications
-                ? "We'll notify you when something important happens"
-                : "You're all caught up!",
-            textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              color: Colors.grey[500],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNotificationDropdownItem({
-    required int id,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required String time,
-    required bool isNew,
-  }) {
-    return InkWell(
-      onTap: () {
-        _markNotificationAsRead(id);
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isNew ? Colors.amber[50] : Colors.transparent,
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: isNew ? Colors.amber[100] : Colors.grey[100],
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                color: isNew ? Colors.amber[800] : Colors.grey[600],
-                size: 18,
-              ),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ),
-                      if (isNew)
-                        Container(
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            "NEW",
-                            style: GoogleFonts.poppins(
-                              fontSize: 8,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      color: Colors.grey[600],
-                      height: 1.3,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    time,
-                    style: GoogleFonts.poppins(
-                      fontSize: 10,
-                      color: Colors.grey[500],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+  void _selectImage() {
+    // Simulate image selection
+    setState(() {
+      selectedImages.add('dummy_image_path');
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Image selected! (Simulated)'),
+        duration: Duration(seconds: 2),
       ),
     );
   }

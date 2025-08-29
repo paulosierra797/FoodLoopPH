@@ -17,7 +17,7 @@ class _NotificationPageState extends State<NotificationPage> {
     // {
     //   "id": 1,
     //   "title": "New comment on your post",
-    //   "message": "Maria commented on your zero waste tips post",
+    //   "message": "Carlos commented on your zero waste tips post",
     //   "time": "2 hours ago",
     //   "isRead": false,
     //   "type": "comment",
@@ -178,7 +178,8 @@ class _NotificationPageState extends State<NotificationPage> {
                   {
                     "id": 1,
                     "title": "Welcome to FoodLoop!",
-                    "message": "Thanks for joining our community. Start exploring now!",
+                    "message":
+                        "Thanks for joining our community. Start exploring now!",
                     "time": "now",
                     "isRead": false,
                     "type": "welcome",
@@ -227,7 +228,7 @@ class _NotificationPageState extends State<NotificationPage> {
   Widget _buildNotificationCard(Map<String, dynamic> notification, int index) {
     IconData iconData;
     Color iconColor;
-    
+
     switch (notification['type']) {
       case 'comment':
         iconData = Icons.chat_bubble;
@@ -277,7 +278,8 @@ class _NotificationPageState extends State<NotificationPage> {
           color: notification['isRead'] ? Colors.white : Colors.amber[50],
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: notification['isRead'] ? Colors.grey[200]! : Colors.amber[200]!,
+            color:
+                notification['isRead'] ? Colors.grey[200]! : Colors.amber[200]!,
           ),
         ),
         child: Row(

@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 class NotificationService extends ChangeNotifier {
   static final NotificationService _instance = NotificationService._internal();
@@ -241,7 +240,7 @@ class NotificationService extends ChangeNotifier {
 
     await Future.delayed(Duration(seconds: 5));
     await showDonorMessageNotification(
-      senderName: 'Maria Santos',
+      senderName: 'Carlos Santos',
       message: 'Hi! The food is ready for pickup.',
     );
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'screens/landing_page.dart';
+import 'screens/main_navigation_screen.dart';
 import 'services/user_service.dart';
 import 'services/notification_service.dart';
 
@@ -202,7 +203,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       setState(() => _isLoading = false);
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => HomeScreen()),
+        MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
       );
     }
   }
@@ -581,7 +582,7 @@ class HomePage extends StatelessWidget {
     },
   ];
 
-  HomePage({Key? key}) : super(key: key);
+  HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1182,7 +1183,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => HomeScreen()),
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  const MainNavigationScreen()),
                         );
                       },
                     ),

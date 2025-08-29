@@ -22,7 +22,8 @@ class _ExplorePageState extends State<ExplorePage> {
       "address": "SM City Dasmariñas, Governor's Drive, Dasmariñas, Cavite",
       "food": "Burgers & Fries",
       "time": "2 hours ago",
-      "img": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400",
+      "img":
+          "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400",
       "rating": 4.5,
       "distance": "1.2 km",
       "category": "Fast Food",
@@ -35,7 +36,8 @@ class _ExplorePageState extends State<ExplorePage> {
       "address": "Paliparan Road, Dasmariñas, Cavite",
       "food": "Chicken & Rice",
       "time": "4 hours ago",
-      "img": "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400",
+      "img":
+          "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400",
       "rating": 4.8,
       "distance": "2.1 km",
       "category": "Fast Food",
@@ -48,7 +50,8 @@ class _ExplorePageState extends State<ExplorePage> {
       "address": "Tejeros Convention, Rosario, Cavite",
       "food": "Fried Chicken",
       "time": "6 hours ago",
-      "img": "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=400",
+      "img":
+          "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=400",
       "rating": 4.3,
       "distance": "3.5 km",
       "category": "Fast Food",
@@ -74,7 +77,8 @@ class _ExplorePageState extends State<ExplorePage> {
       "address": "Imus City, Cavite",
       "food": "Grilled Chicken",
       "time": "5 hours ago",
-      "img": "https://images.unsplash.com/photo-1532550907401-a500c9a57435?w=400",
+      "img":
+          "https://images.unsplash.com/photo-1532550907401-a500c9a57435?w=400",
       "rating": 4.4,
       "distance": "2.8 km",
       "category": "Filipino",
@@ -89,10 +93,10 @@ class _ExplorePageState extends State<ExplorePage> {
       bool matchesSearch = _searchQuery.isEmpty ||
           listing["name"].toLowerCase().contains(_searchQuery.toLowerCase()) ||
           listing["food"].toLowerCase().contains(_searchQuery.toLowerCase());
-      
+
       bool matchesCategory = _selectedCategory == 'All' ||
           listing["category"] == _selectedCategory;
-      
+
       return matchesSearch && matchesCategory;
     }).toList();
   }
@@ -113,7 +117,8 @@ class _ExplorePageState extends State<ExplorePage> {
                   // Location Row
                   Row(
                     children: [
-                      Icon(Icons.location_on, color: Colors.orange[600], size: 20),
+                      Icon(Icons.location_on,
+                          color: Colors.orange[600], size: 20),
                       SizedBox(width: 8),
                       Expanded(
                         child: GestureDetector(
@@ -151,7 +156,8 @@ class _ExplorePageState extends State<ExplorePage> {
                         hintStyle: GoogleFonts.poppins(color: Colors.grey[600]),
                         prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       ),
                     ),
                   ),
@@ -360,7 +366,7 @@ class _ExplorePageState extends State<ExplorePage> {
               },
             ),
           ),
-          
+
           Padding(
             padding: EdgeInsets.all(16),
             child: Column(
@@ -382,23 +388,27 @@ class _ExplorePageState extends State<ExplorePage> {
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: listing["available"] ? Colors.green[100] : Colors.red[100],
+                        color: listing["available"]
+                            ? Colors.green[100]
+                            : Colors.red[100],
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         listing["available"] ? "Available" : "Claimed",
                         style: GoogleFonts.poppins(
                           fontSize: 12,
-                          color: listing["available"] ? Colors.green[700] : Colors.red[700],
+                          color: listing["available"]
+                              ? Colors.green[700]
+                              : Colors.red[700],
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
                   ],
                 ),
-                
+
                 SizedBox(height: 8),
-                
+
                 // Food and Quantity
                 Text(
                   listing["food"],
@@ -408,7 +418,7 @@ class _ExplorePageState extends State<ExplorePage> {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                
+
                 Text(
                   listing["quantity"],
                   style: GoogleFonts.poppins(
@@ -416,9 +426,9 @@ class _ExplorePageState extends State<ExplorePage> {
                     color: Colors.grey[600],
                   ),
                 ),
-                
+
                 SizedBox(height: 8),
-                
+
                 // Address
                 Row(
                   children: [
@@ -437,9 +447,9 @@ class _ExplorePageState extends State<ExplorePage> {
                     ),
                   ],
                 ),
-                
+
                 SizedBox(height: 8),
-                
+
                 // Bottom Row
                 Row(
                   children: [
@@ -459,7 +469,8 @@ class _ExplorePageState extends State<ExplorePage> {
                     SizedBox(width: 16),
                     Row(
                       children: [
-                        Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
+                        Icon(Icons.access_time,
+                            size: 14, color: Colors.grey[500]),
                         SizedBox(width: 4),
                         Text(
                           listing["time"],
@@ -476,7 +487,8 @@ class _ExplorePageState extends State<ExplorePage> {
                         onPressed: () => _claimFood(listing),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange[600],
-                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding:
+                              EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                           ),
@@ -516,17 +528,21 @@ class _ExplorePageState extends State<ExplorePage> {
               ),
             ),
             SizedBox(height: 20),
-            ...['Dasmariñas, Cavite', 'Imus, Cavite', 'Bacoor, Cavite', 'Las Piñas, Metro Manila']
-                .map((location) => ListTile(
-                      leading: Icon(Icons.location_on),
-                      title: Text(location),
-                      onTap: () {
-                        setState(() {
-                          _selectedLocation = location;
-                        });
-                        Navigator.pop(context);
-                      },
-                    )),
+            ...[
+              'Dasmariñas, Cavite',
+              'Imus, Cavite',
+              'Bacoor, Cavite',
+              'Las Piñas, Metro Manila'
+            ].map((location) => ListTile(
+                  leading: Icon(Icons.location_on),
+                  title: Text(location),
+                  onTap: () {
+                    setState(() {
+                      _selectedLocation = location;
+                    });
+                    Navigator.pop(context);
+                  },
+                )),
           ],
         ),
       ),
@@ -564,7 +580,8 @@ class _ExplorePageState extends State<ExplorePage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text("Claim Food"),
-        content: Text("Are you sure you want to claim ${listing["food"]} from ${listing["name"]}?"),
+        content: Text(
+            "Are you sure you want to claim ${listing["food"]} from ${listing["name"]}?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

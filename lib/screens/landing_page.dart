@@ -49,6 +49,39 @@ class _LandingPageState extends State<LandingPage>
     super.dispose();
   }
 
+  // Custom animated page transition for Sign In
+  Route _createSignInRoute() {
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => LoginScreen(),
+      transitionDuration: Duration(milliseconds: 800),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        const begin = Offset(1.0, 0.0);
+        const end = Offset.zero;
+        const curve = Curves.easeInOutCubic;
+
+        var tween = Tween(begin: begin, end: end).chain(
+          CurveTween(curve: curve),
+        );
+
+        var fadeAnimation = Tween<double>(
+          begin: 0.0,
+          end: 1.0,
+        ).animate(CurvedAnimation(
+          parent: animation,
+          curve: Interval(0.3, 1.0, curve: Curves.easeOut),
+        ));
+
+        return SlideTransition(
+          position: animation.drive(tween),
+          child: FadeTransition(
+            opacity: fadeAnimation,
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -79,13 +112,59 @@ class _LandingPageState extends State<LandingPage>
                         ),
                       ),
                       SizedBox(height: 24),
-                      Text(
-                        "FoodLoop PH",
-                        style: GoogleFonts.poppins(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                          letterSpacing: 1.2,
+                      // FoodLoop PH Logo with Very Light Background
+                      Container(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.white.withOpacity(0.9),
+                              Colors.orange[50]!.withOpacity(0.8),
+                              Colors.amber[50]!.withOpacity(0.7),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 12,
+                              offset: Offset(0, 4),
+                            ),
+                            BoxShadow(
+                              color: Colors.orange.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                          border: Border.all(
+                            color: Colors.orange[100]!.withOpacity(0.5),
+                            width: 1,
+                          ),
+                        ),
+                        child: RichText(
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: "Food",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                              TextSpan(
+                                text: "Loop PH",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange[600],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       SizedBox(height: 16),
@@ -124,33 +203,60 @@ class _LandingPageState extends State<LandingPage>
               Spacer(),
               FadeTransition(
                 opacity: _fadeInAnimation,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 32.0),
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple,
-                      foregroundColor: Colors.white,
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      minimumSize: Size(double.infinity, 56),
-                      elevation: 4,
-                    ),
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => LoginScreen()),
-                      );
-                    },
-                    child: Text(
-                      "Get started",
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 32.0),
+                    child: Column(
+                      children: [
+                        // Get Started Button (redirects to Sign In)
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange[600],
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 8,
+                              shadowColor: Colors.orange.withOpacity(0.4),
+                            ),
+                            onPressed: () {
+                              Navigator.push(context, _createSignInRoute());
+                            },
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.rocket_launch_rounded, size: 22),
+                                SizedBox(width: 8),
+                                Text(
+                                  "Get Started",
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        SizedBox(height: 24),
+
+                        // Quick access text
+                        Text(
+                          "Join the community to share and discover food",
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

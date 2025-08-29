@@ -16,7 +16,7 @@ class _AddFoodPageState extends State<AddFoodPage> {
   final _addressController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _contactController = TextEditingController();
-  
+
   String _selectedCategory = 'Prepared Food';
   String _selectedExpiry = 'Today';
   bool _isUrgent = false;
@@ -32,7 +32,7 @@ class _AddFoodPageState extends State<AddFoodPage> {
 
   final List<String> _expiryOptions = [
     'Today',
-    'Tomorrow', 
+    'Tomorrow',
     '2-3 days',
     '1 week',
     'More than a week'
@@ -68,7 +68,8 @@ class _AddFoodPageState extends State<AddFoodPage> {
                         color: Colors.grey[100],
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: Icon(Icons.arrow_back, color: Colors.grey[700], size: 24),
+                      child: Icon(Icons.arrow_back,
+                          color: Colors.grey[700], size: 24),
                     ),
                   ),
                   Expanded(
@@ -112,8 +113,8 @@ class _AddFoodPageState extends State<AddFoodPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.volunteer_activism, 
-                                 color: Colors.white, size: 32),
+                            Icon(Icons.volunteer_activism,
+                                color: Colors.white, size: 32),
                             SizedBox(height: 8),
                             Text(
                               'Share Food, Share Hope',
@@ -156,7 +157,8 @@ class _AddFoodPageState extends State<AddFoodPage> {
                         label: 'Food Category',
                         items: _categories,
                         icon: Icons.category,
-                        onChanged: (value) => setState(() => _selectedCategory = value!),
+                        onChanged: (value) =>
+                            setState(() => _selectedCategory = value!),
                       ),
 
                       SizedBox(height: 16),
@@ -179,7 +181,8 @@ class _AddFoodPageState extends State<AddFoodPage> {
                               label: 'Best Before',
                               items: _expiryOptions,
                               icon: Icons.schedule,
-                              onChanged: (value) => setState(() => _selectedExpiry = value!),
+                              onChanged: (value) =>
+                                  setState(() => _selectedExpiry = value!),
                             ),
                           ),
                         ],
@@ -198,7 +201,8 @@ class _AddFoodPageState extends State<AddFoodPage> {
                       SizedBox(height: 24),
 
                       // Pickup Information Section
-                      _buildSectionHeader('Pickup Information', Icons.location_on),
+                      _buildSectionHeader(
+                          'Pickup Information', Icons.location_on),
                       SizedBox(height: 16),
 
                       _buildTextField(
@@ -230,14 +234,18 @@ class _AddFoodPageState extends State<AddFoodPage> {
                           color: _isUrgent ? Colors.red[50] : Colors.grey[50],
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: _isUrgent ? Colors.red[200]! : Colors.grey[200]!,
+                            color: _isUrgent
+                                ? Colors.red[200]!
+                                : Colors.grey[200]!,
                           ),
                         ),
                         child: Row(
                           children: [
                             Icon(
                               Icons.priority_high,
-                              color: _isUrgent ? Colors.red[600] : Colors.grey[600],
+                              color: _isUrgent
+                                  ? Colors.red[600]
+                                  : Colors.grey[600],
                             ),
                             SizedBox(width: 12),
                             Expanded(
@@ -249,14 +257,18 @@ class _AddFoodPageState extends State<AddFoodPage> {
                                     style: GoogleFonts.poppins(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
-                                      color: _isUrgent ? Colors.red[700] : Colors.grey[700],
+                                      color: _isUrgent
+                                          ? Colors.red[700]
+                                          : Colors.grey[700],
                                     ),
                                   ),
                                   Text(
                                     'Food needs to be picked up today',
                                     style: GoogleFonts.poppins(
                                       fontSize: 12,
-                                      color: _isUrgent ? Colors.red[600] : Colors.grey[600],
+                                      color: _isUrgent
+                                          ? Colors.red[600]
+                                          : Colors.grey[600],
                                     ),
                                   ),
                                 ],
@@ -264,7 +276,8 @@ class _AddFoodPageState extends State<AddFoodPage> {
                             ),
                             Switch(
                               value: _isUrgent,
-                              onChanged: (value) => setState(() => _isUrgent = value),
+                              onChanged: (value) =>
+                                  setState(() => _isUrgent = value),
                               activeColor: Colors.red[600],
                             ),
                           ],
@@ -377,12 +390,14 @@ class _AddFoodPageState extends State<AddFoodPage> {
           controller: controller,
           keyboardType: keyboardType,
           maxLines: maxLines,
-          validator: required ? (value) {
-            if (value == null || value.isEmpty) {
-              return 'This field is required';
-            }
-            return null;
-          } : null,
+          validator: required
+              ? (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'This field is required';
+                  }
+                  return null;
+                }
+              : null,
           decoration: InputDecoration(
             hintText: hint,
             prefixIcon: Icon(icon, color: Colors.grey[600]),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../services/user_service.dart';
+import 'add_food_page.dart';
 import 'explore_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -18,41 +19,19 @@ class _HomePageState extends State<HomePage> {
       "name": "McDo Pala-pala",
       "address": "822 Aguinaldo Hwy, Dasmariñas, 4114 Cavite",
       "food": "Burger & Fries",
-      "img": "https://i.imgur.com/3ZQ3Z5F.png",
-      "time": "2 hours ago",
-      "portions": "15 servings"
+      "img": "https://i.imgur.com/3ZQ3Z5F.png"
     },
     {
       "name": "Balinsasayaw",
       "address": "822 Aguinaldo Hwy, Dasmariñas, 4114 Cavite",
       "food": "Pizza",
-      "img": "https://i.imgur.com/jX0Xn5G.png",
-      "time": "4 hours ago",
-      "portions": "8 servings"
+      "img": "https://i.imgur.com/jX0Xn5G.png"
     },
     {
       "name": "Jabi Caloocan",
       "address": "822 Aguinaldo Hwy, Dasmariñas, 4114 Cavite",
       "food": "Fried Chicken",
-      "img": "https://i.imgur.com/IDQK9tC.png",
-      "time": "6 hours ago",
-      "portions": "12 servings"
-    },
-    {
-      "name": "Tita's Kitchen",
-      "address": "Manila City, Metro Manila",
-      "food": "Home-cooked Meals",
-      "img": "https://i.imgur.com/3ZQ3Z5F.png",
-      "time": "1 day ago",
-      "portions": "20 servings"
-    },
-    {
-      "name": "Bread Corner",
-      "address": "Quezon City, Metro Manila",
-      "food": "Fresh Bread & Pastries",
-      "img": "https://i.imgur.com/jX0Xn5G.png",
-      "time": "1 day ago",
-      "portions": "25 pieces"
+      "img": "https://i.imgur.com/IDQK9tC.png"
     },
   ];
 
@@ -86,14 +65,14 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
 
-          // Dashboard Section
+          // Quick Actions Section
           Container(
             margin: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Dashboard",
+                  "Quick Actions",
                   style: GoogleFonts.poppins(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -104,29 +83,34 @@ class _HomePageState extends State<HomePage> {
                 Row(
                   children: [
                     Expanded(
-                      child: _buildDashboardCard(
-                        "142",
-                        "Total Donations",
-                        Icons.local_dining,
+                      child: _buildActionCard(
+                        "Share Food",
+                        "Donate food to help others",
+                        Icons.add_circle,
                         Colors.green,
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => AddFoodPage()),
+                          );
+                        },
                       ),
                     ),
                     SizedBox(width: 12),
                     Expanded(
-                      child: _buildDashboardCard(
-                        "38",
-                        "Active Listings",
-                        Icons.restaurant_menu,
-                        Colors.orange,
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: _buildDashboardCard(
-                        "89",
-                        "People Helped",
-                        Icons.people,
+                      child: _buildActionCard(
+                        "Find Food",
+                        "Discover nearby donations",
+                        Icons.search,
                         Colors.blue,
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => ExplorePage()),
+                          );
+                        },
                       ),
                     ),
                   ],
@@ -135,7 +119,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
 
-          // Featured Food Listings Section
+          // Recent Donations Section
           Expanded(
             child: Container(
               margin: EdgeInsets.symmetric(horizontal: 16),
@@ -145,7 +129,7 @@ class _HomePageState extends State<HomePage> {
                   Row(
                     children: [
                       Text(
-                        "Featured Food Listings",
+                        "Recent Donations",
                         style: GoogleFonts.poppins(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -191,51 +175,52 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildDashboardCard(
-      String value, String label, IconData icon, Color color) {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              shape: BoxShape.circle,
+  Widget _buildActionCard(String title, String subtitle, IconData icon,
+      Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 10,
+              offset: Offset(0, 4),
             ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          SizedBox(height: 8),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
+          ],
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 24),
             ),
-          ),
-          SizedBox(height: 2),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
-              fontSize: 11,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
+            SizedBox(height: 8),
+            Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
             ),
-          ),
-        ],
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -297,37 +282,13 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 SizedBox(height: 2),
-                Row(
-                  children: [
-                    Icon(Icons.access_time, size: 12, color: Colors.grey[500]),
-                    SizedBox(width: 4),
-                    Text(
-                      donation["time"] ?? "Recently",
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Icon(Icons.restaurant, size: 12, color: Colors.grey[500]),
-                    SizedBox(width: 4),
-                    Text(
-                      donation["portions"] ?? "Multiple",
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 2),
                 Text(
                   donation["address"]!,
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     color: Colors.grey[600],
                   ),
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],

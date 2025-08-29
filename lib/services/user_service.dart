@@ -221,10 +221,10 @@ class UserService extends ChangeNotifier {
     _nearbyUsers = [
       User(
         id: '2',
-        firstName: 'Maria',
+        firstName: 'Carlos',
         lastName: 'Santos',
-        username: 'mariasantos',
-        email: 'maria@example.com',
+        username: 'carlossantos',
+        email: 'carlos@example.com',
         phoneNumber: '09876543210',
         isLocationSharingEnabled: true,
         latitude: 14.2639, // Dasmariñas area
