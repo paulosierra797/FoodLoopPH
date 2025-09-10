@@ -1,13 +1,23 @@
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'utils/dbcon.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 import 'screens/landing_page.dart';
 import 'screens/main_navigation_screen.dart';
 import 'services/user_service.dart';
 import 'services/notification_service.dart';
 
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Supabase
+  await Supabase.initialize(
+    url: supabaseUrl,
+    anonKey: supabaseAnonKey,
+  );
 
   // Initialize services
   final userService = UserService();

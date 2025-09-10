@@ -1,8 +1,11 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:async';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'main_navigation_screen.dart';
+import 'enhanced_login_screen.dart';
+import 'dart:async';
 
 class EnhancedSignUpScreen extends StatefulWidget {
   const EnhancedSignUpScreen({super.key});
@@ -248,28 +251,39 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
     if (!_formKey.currentState!.validate()) return;
     if (!_agreedToTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please agree to the Terms and Conditions'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('Please agree to the Terms and Conditions'), backgroundColor: Colors.red),
       );
       return;
     }
     if (!_isUsernameAvailable) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please choose a different username'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('Please choose a different username'), backgroundColor: Colors.red),
       );
       return;
     }
 
     setState(() => _isLoading = true);
 
+    final supabase = Supabase.instance.client;
     try {
-      // Simulate API call
-      await Future.delayed(Duration(seconds: 3));
+      // 1. Register user with Supabase Auth
+      final authResponse = await supabase.auth.signUp(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      final user = authResponse.user;
+      if (user == null) throw Exception('Sign up failed.');
+
+      // 2. Insert user profile into public.users table
+      await supabase.from('users').insert({
+        'id': user.id,
+        'first_name': _firstNameController.text.trim(),
+        'last_name': _lastNameController.text.trim(),
+        'username': _usernameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'phone_number': _phoneController.text.trim(),
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -287,14 +301,11 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
+        MaterialPageRoute(builder: (context) => const EnhancedLoginScreen()),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Registration failed. Please try again.'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('Registration failed. Please try again.'), backgroundColor: Colors.red),
       );
     } finally {
       setState(() => _isLoading = false);

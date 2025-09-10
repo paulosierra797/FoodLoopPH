@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'home_page.dart';
+import 'main_navigation_screen.dart';
 import 'forgot_password_page.dart';
 import 'enhanced_sign_up_screen.dart';
 import '../services/auth_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class EnhancedLoginScreen extends StatefulWidget {
   const EnhancedLoginScreen({super.key});
@@ -84,41 +86,28 @@ class _EnhancedLoginScreenState extends State<EnhancedLoginScreen>
         _errorMessage = '';
       });
 
-      final authService = Provider.of<AuthService>(context, listen: false);
-
+      final supabase = Supabase.instance.client;
       try {
-        final result = await authService.login(
-          _emailController.text.trim(),
-          _passwordController.text,
+        final response = await supabase.auth.signInWithPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
         );
-
         setState(() => _isLoading = false);
-
-        if (result.success) {
+        if (response.user != null) {
           // Reset login attempts on successful login
           _loginAttempts = 0;
           _lastFailedAttempt = null;
-
-          // Show success feedback with haptic
           HapticFeedback.lightImpact();
-
-          _showSuccessMessage(
-              'Welcome back, ${result.user?.firstName ?? 'User'}!');
-
-          // Navigate to home with smooth transition
+          _showSuccessMessage('Welcome back, ${response.user!.email}!');
           Navigator.pushReplacement(
             context,
             PageRouteBuilder(
-              pageBuilder: (context, animation, secondaryAnimation) =>
-                  HomePage(),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) {
+              pageBuilder: (context, animation, secondaryAnimation) => MainNavigationScreen(),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
                 const begin = Offset(1.0, 0.0);
                 const end = Offset.zero;
                 const curve = Curves.easeInOutCubic;
-                var tween = Tween(begin: begin, end: end).chain(
-                  CurveTween(curve: curve),
-                );
+                var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
                 return SlideTransition(
                   position: animation.drive(tween),
                   child: child,
@@ -132,7 +121,7 @@ class _EnhancedLoginScreenState extends State<EnhancedLoginScreen>
           _lastFailedAttempt = DateTime.now();
           HapticFeedback.mediumImpact();
           _shakeForm();
-          _showErrorMessage(result.message);
+          _showErrorMessage('Login failed.');
         }
       } catch (e) {
         setState(() => _isLoading = false);
