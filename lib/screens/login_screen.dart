@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'main_navigation_screen.dart';
 import 'forgot_password_page.dart';
 import 'enhanced_sign_up_screen.dart';
@@ -80,15 +81,16 @@ class _LoginScreenState extends State<LoginScreen>
       _errorMessage = '';
     });
 
+    final supabase = Supabase.instance.client;
+
     try {
-      // Simulate API call with consistent timing to prevent timing attacks
-      await Future.delayed(Duration(seconds: 2));
+      final response = await supabase.auth.signInWithPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
 
-      // Demo credentials check - in real app, this would be server-side
-      if (_emailController.text.trim().toLowerCase() == "admin@foodloop.ph" &&
-          _passwordController.text == "admin123") {
+      if (response.user != null) {
         await _saveCredentials();
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -102,19 +104,23 @@ class _LoginScreenState extends State<LoginScreen>
             duration: Duration(seconds: 2),
           ),
         );
-
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
         );
       } else {
-        // Always throw the same generic error to prevent user enumeration
-        throw Exception('Authentication failed');
+        setState(() {
+          _errorMessage =
+              'Invalid email or password. Please check your credentials and try again.';
+        });
       }
+    } on AuthException catch (e) {
+      setState(() {
+        _errorMessage = e.message;
+      });
     } catch (e) {
       setState(() {
-        _errorMessage =
-            'Invalid email or password. Please check your credentials and try again.';
+        _errorMessage = 'Unexpected error: $e';
       });
     } finally {
       setState(() => _isLoading = false);

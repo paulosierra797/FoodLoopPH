@@ -1,6 +1,7 @@
 // Enhanced ForgotPasswordPage widget with improved UI
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -411,17 +412,27 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
         _isLoading = true;
       });
 
-      // Simulate API call
-      await Future.delayed(Duration(seconds: 2));
-
-      setState(() {
-        _isLoading = false;
-        _emailSent = true;
-      });
-
-      // Start animation for success state
-      _animationController.reset();
-      _animationController.forward();
+      final supabase = Supabase.instance.client;
+      final email = _emailController.text.trim();
+      try {
+        await supabase.auth.resetPasswordForEmail(email);
+        setState(() {
+          _isLoading = false;
+          _emailSent = true;
+        });
+        _animationController.reset();
+        _animationController.forward();
+      } catch (e) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send reset email: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 }

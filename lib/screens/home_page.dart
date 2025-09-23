@@ -1,19 +1,14 @@
-// HomePage widget (donations list) - Simplified
+// HomePage widget (donations list) - Riverpod version
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import '../services/user_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/user_service_provider.dart';
 import 'explore_page.dart';
 
-class HomePage extends StatefulWidget {
+class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
-  @override
-  _HomePageState createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  final List<Map<String, String>> donations = [
+  final List<Map<String, String>> donations = const [
     {
       "name": "McDo Pala-pala",
       "address": "822 Aguinaldo Hwy, Dasmariñas, 4114 Cavite",
@@ -57,7 +52,8 @@ class _HomePageState extends State<HomePage> {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userService = ref.watch(userServiceProvider);
     return Container(
       color: Colors.grey[50],
       child: Column(
@@ -68,19 +64,13 @@ class _HomePageState extends State<HomePage> {
             color: Colors.white,
             child: Row(
               children: [
-                Consumer<UserService>(
-                  builder: (context, userService, child) {
-                    final userName =
-                        userService.currentUser?.firstName ?? "User";
-                    return Text(
-                      "Good morning, $userName",
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                    );
-                  },
+                Text(
+                  "Good morning, ${userService.currentUser?.firstName ?? "User"}",
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
                 ),
               ],
             ),

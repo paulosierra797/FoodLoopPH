@@ -266,36 +266,58 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
 
     final supabase = Supabase.instance.client;
     try {
+      final email = _emailController.text.trim();
+      final password = _passwordController.text.trim();
+      
+      // Check if user already exists
+      try {
+        await supabase
+            .from('users')
+            .select()
+            .eq('email', email)
+            .single();
+            
+        // If we get here, user exists
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('This email is already registered. Please sign in instead.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+        
+      } catch (_) {
+        // No user found, continue with registration
+      }
+
       // 1. Register user with Supabase Auth
       final authResponse = await supabase.auth.signUp(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
+        email: email,
+        password: password,
+        data: {
+          'username': _usernameController.text.trim(),
+          'first_name': _firstNameController.text.trim(),
+          'last_name': _lastNameController.text.trim(),
+          'phone_number': _phoneController.text.trim(),
+        }
       );
 
       final user = authResponse.user;
       if (user == null) throw Exception('Sign up failed.');
 
-      // 2. Insert user profile into public.users table
-      await supabase.from('users').insert({
-        'id': user.id,
-        'first_name': _firstNameController.text.trim(),
-        'last_name': _lastNameController.text.trim(),
-        'username': _usernameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'phone_number': _phoneController.text.trim(),
-      });
-
+      // Do NOT insert into users table here. Wait for email verification and login.
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
               Icon(Icons.check_circle, color: Colors.white),
               SizedBox(width: 8),
-              Text('Account created successfully!'),
+              Text('Registration successful! Please check your email to verify your account.'),
             ],
           ),
           backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
+          duration: Duration(seconds: 3),
         ),
       );
 

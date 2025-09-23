@@ -1,6 +1,8 @@
 // AddFoodPage widget
 import 'package:flutter/material.dart';
+
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AddFoodPage extends StatefulWidget {
   const AddFoodPage({super.key});
@@ -481,9 +483,30 @@ class _AddFoodPageState extends State<AddFoodPage> {
     );
   }
 
-  void _submitDonation() {
-    if (_formKey.currentState!.validate()) {
-      // Show success dialog
+  Future<void> _submitDonation() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('You must be logged in to post a donation.')),
+      );
+      return;
+    }
+
+    try {
+      await supabase.from('food_listings').insert({
+        'title': _foodNameController.text.trim(),
+        'description': _descriptionController.text.trim(),
+        'category': _selectedCategory,
+        'location': _addressController.text.trim(),
+        'quantity': _quantityController.text.trim(),
+        'posted_by': user.id,
+        'status': 'available',
+        'expiration_date': _mapExpiryToDate(_selectedExpiry),
+        'created_at': DateTime.now().toIso8601String(),
+      });
       showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -536,8 +559,8 @@ class _AddFoodPageState extends State<AddFoodPage> {
                       ),
                     ),
                     onPressed: () {
-                      Navigator.of(context).pop(); // Close dialog
-                      Navigator.of(context).pop(); // Go back to previous page
+                      Navigator.of(context).pop();
+                      Navigator.of(context).pop();
                     },
                     child: Text(
                       'Continue',
@@ -552,6 +575,33 @@ class _AddFoodPageState extends State<AddFoodPage> {
           );
         },
       );
+    } on PostgrestException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to post donation: ${e.message}')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to post donation: $e')),
+      );
+    }
+  }
+
+  // Helper to map expiry option to a date string (YYYY-MM-DD)
+  String _mapExpiryToDate(String expiry) {
+    final now = DateTime.now();
+    switch (expiry) {
+      case 'Today':
+        return now.toIso8601String().split('T').first;
+      case 'Tomorrow':
+        return now.add(Duration(days: 1)).toIso8601String().split('T').first;
+      case '2-3 days':
+        return now.add(Duration(days: 3)).toIso8601String().split('T').first;
+      case '1 week':
+        return now.add(Duration(days: 7)).toIso8601String().split('T').first;
+      case 'More than a week':
+        return now.add(Duration(days: 14)).toIso8601String().split('T').first;
+      default:
+        return now.toIso8601String().split('T').first;
     }
   }
 

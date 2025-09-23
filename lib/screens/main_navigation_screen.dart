@@ -1,9 +1,10 @@
 // Main Navigation Screen with Single Scaffold
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/user_service_provider.dart';
 import 'home_page.dart';
-import 'explore_page.dart';
+import 'explore_page_full.dart';
 import 'add_food_page.dart';
 import 'community_page.dart';
 import 'chat_list_page.dart';
@@ -16,15 +17,16 @@ import 'about_page.dart';
 import 'change_password_page.dart';
 import 'landing_page.dart';
 import '../services/user_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class MainNavigationScreen extends StatefulWidget {
+class MainNavigationScreen extends ConsumerStatefulWidget {
   const MainNavigationScreen({super.key});
 
   @override
-  _MainNavigationScreenState createState() => _MainNavigationScreenState();
+  ConsumerState<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
-class _MainNavigationScreenState extends State<MainNavigationScreen> {
+class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   int _selectedIndex = 0;
 
   late List<Widget> _pages;
@@ -49,7 +51,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+  final userService = ref.watch(userServiceProvider);
+  return Scaffold(
       // Consistent AppBar with notification bell and hamburger menu on the right
       appBar: AppBar(
         backgroundColor: Colors.orange[600],
@@ -129,57 +132,48 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                         CircleAvatar(
                           radius: 30,
                           backgroundColor: Colors.white,
-                          child: Consumer<UserService>(
-                            builder: (context, userService, child) {
+                          child: Text(
+                            (() {
                               final user = userService.currentUser;
                               final fullName = user?.fullName ?? "";
-                              final initials = fullName.isNotEmpty
+                              return fullName.isNotEmpty
                                   ? fullName
                                       .split(' ')
-                                      .map((name) =>
-                                          name.isNotEmpty ? name[0] : '')
+                                      .map((name) => name.isNotEmpty ? name[0] : '')
                                       .take(2)
                                       .join('')
                                   : "JD";
-                              return Text(
-                                initials,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.orange[600],
-                                ),
-                              );
-                            },
+                            })(),
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange[600],
+                            ),
                           ),
                         ),
                         SizedBox(height: 12),
-                        Consumer<UserService>(
-                          builder: (context, userService, child) {
-                            final user = userService.currentUser;
-                            return Column(
-                              children: [
-                                Text(
-                                  user?.fullName ?? "Juan Dela Cruz",
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  user?.email ?? "juan.delacruz@example.com",
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    color: Colors.white70,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            );
-                          },
+                        Column(
+                          children: [
+                            Text(
+                              userService.currentUser?.fullName ?? "Juan Dela Cruz",
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              userService.currentUser?.email ?? "juan.delacruz@example.com",
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.white70,
+                              ),
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -264,7 +258,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                           ),
                           elevation: 2,
                         ),
-                        onPressed: () {
+                        onPressed: () async {
+                          // Sign out from Supabase
+                          await Supabase.instance.client.auth.signOut();
                           Navigator.of(context).pushAndRemoveUntil(
                             MaterialPageRoute(
                                 builder: (context) => LandingPage()),

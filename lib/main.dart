@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'utils/dbcon.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'screens/landing_page.dart';
 import 'screens/main_navigation_screen.dart';
 import 'services/user_service.dart';
@@ -26,39 +26,42 @@ void main() async {
   await userService.initialize();
   await notificationService.initialize();
 
-  runApp(FoodLoopApp(
-    userService: userService,
-    notificationService: notificationService,
-  ));
+  // Check for existing Supabase session
+  final session = Supabase.instance.client.auth.currentSession;
+
+  runApp(
+    ProviderScope(
+      child: FoodLoopApp(
+        userService: userService,
+        notificationService: notificationService,
+        initialSession: session,
+      ),
+    ),
+  );
 }
 
 class FoodLoopApp extends StatelessWidget {
   final UserService userService;
   final NotificationService notificationService;
+  final Session? initialSession;
 
   const FoodLoopApp({
     super.key,
     required this.userService,
     required this.notificationService,
+    this.initialSession,
   });
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider<UserService>.value(value: userService),
-        ChangeNotifierProvider<NotificationService>.value(
-            value: notificationService),
-      ],
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'FoodLoop PH',
-        theme: ThemeData(
-          primarySwatch: Colors.amber,
-          fontFamily: GoogleFonts.poppins().fontFamily,
-        ),
-        home: LandingPage(),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'FoodLoop PH',
+      theme: ThemeData(
+        primarySwatch: Colors.amber,
+        fontFamily: GoogleFonts.poppins().fontFamily,
       ),
+      home: initialSession != null ? MainNavigationScreen() : LandingPage(),
     );
   }
 }

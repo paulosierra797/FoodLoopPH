@@ -25,9 +25,6 @@ class _EnhancedLoginScreenState extends State<EnhancedLoginScreen>
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   String _errorMessage = '';
-  int _loginAttempts = 0;
-  DateTime? _lastFailedAttempt;
-
   late AnimationController _animationController;
   late AnimationController _shakeController;
   late Animation<double> _fadeAnimation;
@@ -37,29 +34,23 @@ class _EnhancedLoginScreenState extends State<EnhancedLoginScreen>
   @override
   void initState() {
     super.initState();
-
     _animationController = AnimationController(
       duration: Duration(milliseconds: 1200),
       vsync: this,
     );
-
     _shakeController = AnimationController(
       duration: Duration(milliseconds: 500),
       vsync: this,
     );
-
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
-
     _slideAnimation = Tween<double>(begin: 50.0, end: 0.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
-
     _shakeAnimation = Tween<double>(begin: -5.0, end: 5.0).animate(
       CurvedAnimation(parent: _shakeController, curve: Curves.bounceInOut),
     );
-
     _animationController.forward();
   }
 
@@ -74,117 +65,34 @@ class _EnhancedLoginScreenState extends State<EnhancedLoginScreen>
 
   void _handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      // Check for rate limiting
-      if (_isRateLimited()) {
-        _showErrorMessage(
-            'Too many failed attempts. Please try again in 15 minutes.');
-        return;
-      }
-
-      setState(() {
-        _isLoading = true;
-        _errorMessage = '';
-      });
-
+      setState(() => _isLoading = true);
       final supabase = Supabase.instance.client;
       try {
         final response = await supabase.auth.signInWithPassword(
           email: _emailController.text.trim(),
-          password: _passwordController.text,
+          password: _passwordController.text.trim(),
         );
-        setState(() => _isLoading = false);
         if (response.user != null) {
-          // Reset login attempts on successful login
-          _loginAttempts = 0;
-          _lastFailedAttempt = null;
-          HapticFeedback.lightImpact();
-          _showSuccessMessage('Welcome back, ${response.user!.email}!');
           Navigator.pushReplacement(
             context,
-            PageRouteBuilder(
-              pageBuilder: (context, animation, secondaryAnimation) => MainNavigationScreen(),
-              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                const begin = Offset(1.0, 0.0);
-                const end = Offset.zero;
-                const curve = Curves.easeInOutCubic;
-                var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-                return SlideTransition(
-                  position: animation.drive(tween),
-                  child: child,
-                );
-              },
-              transitionDuration: Duration(milliseconds: 500),
-            ),
+            MaterialPageRoute(builder: (context) => MainNavigationScreen()),
           );
         } else {
-          _loginAttempts++;
-          _lastFailedAttempt = DateTime.now();
-          HapticFeedback.mediumImpact();
-          _shakeForm();
-          _showErrorMessage('Login failed.');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Login failed. Please check your credentials.')),
+          );
         }
       } catch (e) {
-        setState(() => _isLoading = false);
-        _loginAttempts++;
-        _lastFailedAttempt = DateTime.now();
-        HapticFeedback.mediumImpact();
-        _shakeForm();
-        _showErrorMessage('An unexpected error occurred. Please try again.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
       }
-    } else {
-      _shakeForm();
+      setState(() => _isLoading = false);
     }
   }
+    
 
-  void _shakeForm() {
-    _shakeController.forward().then((_) => _shakeController.reverse());
-  }
 
-  bool _isRateLimited() {
-    if (_loginAttempts >= 5 && _lastFailedAttempt != null) {
-      final timeSinceLastAttempt =
-          DateTime.now().difference(_lastFailedAttempt!);
-      return timeSinceLastAttempt.inMinutes < 15; // 15 minute cooldown
-    }
-    return false;
-  }
-
-  void _showErrorMessage(String message) {
-    setState(() => _errorMessage = message);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.error_outline, color: Colors.white),
-            SizedBox(width: 8),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Colors.red[600],
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        duration: Duration(seconds: 4),
-      ),
-    );
-  }
-
-  void _showSuccessMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.check_circle_outline, color: Colors.white),
-            SizedBox(width: 8),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Colors.green[600],
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
