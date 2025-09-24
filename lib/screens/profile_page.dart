@@ -434,24 +434,44 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                   ),
                                   onPressed: () async {
                                     if (_formKey.currentState!.validate()) {
-                                      await ref.read(userServiceProvider).updateUserProfile(
-                                        firstName: _firstNameController.text.trim(),
-                                        lastName: _lastNameController.text.trim(),
-                                        username: _usernameController.text.trim(),
-                                        email: _emailController.text.trim(),
-                                        phoneNumber: _phoneController.text.trim(),
-                                        birthDate: _birthController.text.trim(),
-                                        gender: _selectedGender,
-                                      );
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                              'Profile updated successfully!'),
-                                          backgroundColor: Colors.green,
+                                      final confirmed = await showDialog<bool>(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: Text('Confirm Update'),
+                                          content: Text('Are you sure you want to update your profile information?'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context, false),
+                                              child: Text('Cancel'),
+                                            ),
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context, true),
+                                              style: TextButton.styleFrom(foregroundColor: Colors.amber[700]),
+                                              child: Text('Update'),
+                                            ),
+                                          ],
                                         ),
                                       );
-                                      Navigator.pop(context);
+                                      if (confirmed == true) {
+                                        await ref.read(userServiceProvider).updateUserProfile(
+                                          firstName: _firstNameController.text.trim(),
+                                          lastName: _lastNameController.text.trim(),
+                                          username: _usernameController.text.trim(),
+                                          email: _emailController.text.trim(),
+                                          phoneNumber: _phoneController.text.trim(),
+                                          birthDate: _birthController.text.trim(),
+                                          gender: _selectedGender,
+                                        );
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                                'Profile updated successfully!'),
+                                            backgroundColor: Colors.green,
+                                          ),
+                                        );
+                                        Navigator.pop(context);
+                                      }
                                     }
                                   },
                                   child: Text(

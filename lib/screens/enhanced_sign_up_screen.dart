@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'main_navigation_screen.dart';
-import 'enhanced_login_screen.dart';
+import 'login_screen.dart';
 import 'dart:async';
 
 class EnhancedSignUpScreen extends StatefulWidget {
@@ -323,7 +323,7 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const EnhancedLoginScreen()),
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
