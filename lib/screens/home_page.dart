@@ -1,59 +1,35 @@
+
 // HomePage widget (donations list) - Riverpod version
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/user_service_provider.dart';
+import '../providers/food_listings_provider.dart';
 import 'explore_page_full.dart';
+
+  String _getTimeAgo(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m ago';
+    } else {
+      return 'Just now';
+    }
+  }
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
-  final List<Map<String, String>> donations = const [
-    {
-      "name": "McDo Pala-pala",
-      "address": "822 Aguinaldo Hwy, Dasmariñas, 4114 Cavite",
-      "food": "Burger & Fries",
-      "img": "https://i.imgur.com/3ZQ3Z5F.png",
-      "time": "2 hours ago",
-      "portions": "15 servings"
-    },
-    {
-      "name": "Balinsasayaw",
-      "address": "822 Aguinaldo Hwy, Dasmariñas, 4114 Cavite",
-      "food": "Pizza",
-      "img": "https://i.imgur.com/jX0Xn5G.png",
-      "time": "4 hours ago",
-      "portions": "8 servings"
-    },
-    {
-      "name": "Jabi Caloocan",
-      "address": "822 Aguinaldo Hwy, Dasmariñas, 4114 Cavite",
-      "food": "Fried Chicken",
-      "img": "https://i.imgur.com/IDQK9tC.png",
-      "time": "6 hours ago",
-      "portions": "12 servings"
-    },
-    {
-      "name": "Tita's Kitchen",
-      "address": "Manila City, Metro Manila",
-      "food": "Home-cooked Meals",
-      "img": "https://i.imgur.com/3ZQ3Z5F.png",
-      "time": "1 day ago",
-      "portions": "20 servings"
-    },
-    {
-      "name": "Bread Corner",
-      "address": "Quezon City, Metro Manila",
-      "food": "Fresh Bread & Pastries",
-      "img": "https://i.imgur.com/jX0Xn5G.png",
-      "time": "1 day ago",
-      "portions": "25 pieces"
-    },
-  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userService = ref.watch(userServiceProvider);
+    final listingsAsync = ref.watch(foodListingsProvider);
     return Container(
       color: Colors.grey[50],
       child: Column(
@@ -76,7 +52,7 @@ class HomePage extends ConsumerWidget {
             ),
           ),
 
-          // Dashboard Section
+          // Dashboard Section (unchanged)
           Container(
             margin: EdgeInsets.all(16),
             child: Column(
@@ -125,7 +101,7 @@ class HomePage extends ConsumerWidget {
             ),
           ),
 
-          // Featured Food Listings Section
+          // Featured Food Listings Section (dynamic)
           Expanded(
             child: Container(
               margin: EdgeInsets.symmetric(horizontal: 16),
@@ -164,12 +140,28 @@ class HomePage extends ConsumerWidget {
                   ),
                   SizedBox(height: 12),
                   Expanded(
-                    child: ListView.builder(
-                      itemCount: donations.length,
-                      itemBuilder: (context, index) {
-                        final donation = donations[index];
-                        return _buildDonationCard(donation);
+                    child: listingsAsync.when(
+                      data: (listings) {
+                        if (listings.isEmpty) {
+                          return Center(
+                            child: Text(
+                              'No food listings yet.',
+                              style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey[600]),
+                            ),
+                          );
+                        }
+                        // Show up to 5 latest listings
+                        final featured = listings.take(5).toList();
+                        return ListView.builder(
+                          itemCount: featured.length,
+                          itemBuilder: (context, index) {
+                            final item = featured[index];
+                            return _buildFeaturedListingCard(item);
+                          },
+                        );
                       },
+                      loading: () => Center(child: CircularProgressIndicator()),
+                      error: (e, st) => Center(child: Text('Error loading listings')),
                     ),
                   ),
                 ],
@@ -230,7 +222,20 @@ class HomePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildDonationCard(Map<String, String> donation) {
+  Widget _buildFeaturedListingCard(Map<String, dynamic> item) {
+    // Map Supabase fields to card fields
+    final title = (item['title'] ?? 'No Title').toString();
+    final description = (item['description'] ?? '').toString();
+    final location = (item['location'] ?? '').toString();
+    final quantity = (item['quantity'] ?? '').toString();
+    final img = (item['images'] != null && item['images'] is List && (item['images'] as List).isNotEmpty)
+        ? (item['images'][0] ?? '').toString()
+        : '';
+    final status = (item['status'] ?? '').toString();
+    final createdAt = (item['created_at'] ?? '').toString();
+    final DateTime? date = DateTime.tryParse(createdAt);
+    final String timeAgo = date != null ? _getTimeAgo(date) : 'Recently';
+
     return Container(
       margin: EdgeInsets.only(bottom: 12),
       padding: EdgeInsets.all(16),
@@ -249,20 +254,27 @@ class HomePage extends ConsumerWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-              donation["img"]!,
-              width: 60,
-              height: 60,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  width: 60,
-                  height: 60,
-                  color: Colors.grey[200],
-                  child: Icon(Icons.food_bank, color: Colors.grey[400]),
-                );
-              },
-            ),
+            child: img.isNotEmpty
+                ? Image.network(
+                    img,
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 60,
+                        height: 60,
+                        color: Colors.grey[200],
+                        child: Icon(Icons.food_bank, color: Colors.grey[400]),
+                      );
+                    },
+                  )
+                : Container(
+                    width: 60,
+                    height: 60,
+                    color: Colors.grey[200],
+                    child: Icon(Icons.food_bank, color: Colors.grey[400]),
+                  ),
           ),
           SizedBox(width: 16),
           Expanded(
@@ -270,7 +282,7 @@ class HomePage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  donation["name"]!,
+                  title,
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -278,21 +290,24 @@ class HomePage extends ConsumerWidget {
                   ),
                 ),
                 SizedBox(height: 4),
-                Text(
-                  donation["food"]!,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: Colors.orange[600],
-                    fontWeight: FontWeight.w500,
+                if (description.isNotEmpty)
+                  Text(
+                    description,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.orange[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
                 SizedBox(height: 2),
                 Row(
                   children: [
                     Icon(Icons.access_time, size: 12, color: Colors.grey[500]),
                     SizedBox(width: 4),
                     Text(
-                      donation["time"] ?? "Recently",
+                      timeAgo,
                       style: GoogleFonts.poppins(
                         fontSize: 11,
                         color: Colors.grey[600],
@@ -302,7 +317,7 @@ class HomePage extends ConsumerWidget {
                     Icon(Icons.restaurant, size: 12, color: Colors.grey[500]),
                     SizedBox(width: 4),
                     Text(
-                      donation["portions"] ?? "Multiple",
+                      quantity,
                       style: GoogleFonts.poppins(
                         fontSize: 11,
                         color: Colors.grey[600],
@@ -311,15 +326,16 @@ class HomePage extends ConsumerWidget {
                   ],
                 ),
                 SizedBox(height: 2),
-                Text(
-                  donation["address"]!,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.grey[600],
+                if (location.isNotEmpty)
+                  Text(
+                    location,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
               ],
             ),
           ),
@@ -330,7 +346,7 @@ class HomePage extends ConsumerWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              "Available",
+              status.isNotEmpty ? status : "Available",
               style: GoogleFonts.poppins(
                 fontSize: 12,
                 color: Colors.orange[600],
