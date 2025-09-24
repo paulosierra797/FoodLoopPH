@@ -1,19 +1,21 @@
 // ProfilePage widget
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import '../services/user_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../providers/user_service_provider.dart';
 
-class ProfilePage extends StatefulWidget {
+class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
 
   @override
-  _ProfilePageState createState() => _ProfilePageState();
+  ConsumerState<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfilePageState extends ConsumerState<ProfilePage> {
+  Set<String> _existingUsernames = {};
   final _formKey = GlobalKey<FormState>();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
@@ -23,23 +25,32 @@ class _ProfilePageState extends State<ProfilePage> {
   final _birthController = TextEditingController();
   String _selectedGender = 'Male';
   File? _profileImage;
-  final List<String> _existingUsernames = [
-    'john_doe',
-    'carlos_santos',
-    'admin',
-    'user123'
-  ]; // Simulated existing usernames
-
+ 
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadUserData());
+    _fetchExistingUsernames();
+  }
+
+  Future<void> _fetchExistingUsernames() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final response = await supabase.from('users').select('username');
+      setState(() {
+        _existingUsernames = response
+            .map((u) => (u['username'] ?? '').toString().toLowerCase())
+            .where((u) => u.isNotEmpty)
+            .toSet();
+      });
+    } catch (e) {
+      debugPrint('Failed to fetch usernames: $e');
+    }
   }
 
   void _loadUserData() {
-    final userService = Provider.of<UserService>(context, listen: false);
+    final userService = ref.read(userServiceProvider);
     final user = userService.currentUser;
-
     if (user != null) {
       _firstNameController.text = user.firstName;
       _lastNameController.text = user.lastName;
@@ -48,15 +59,6 @@ class _ProfilePageState extends State<ProfilePage> {
       _phoneController.text = user.phoneNumber;
       _birthController.text = user.birthDate ?? '';
       _selectedGender = user.gender ?? 'Male';
-    } else {
-      // Load sample user data as if from registration
-      _firstNameController.text = 'Juan';
-      _lastNameController.text = 'Dela Cruz';
-      _usernameController.text = 'juan_delacruz';
-      _emailController.text = 'juan.delacruz@example.com';
-      _phoneController.text = '+63 912 345 6789';
-      _birthController.text = '15/06/1995';
-      _selectedGender = 'Male';
     }
   }
 
@@ -140,7 +142,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   bool _isUsernameAvailable(String username) {
-    final userService = Provider.of<UserService>(context, listen: false);
+    final userService = ref.read(userServiceProvider);
     final currentUser = userService.currentUser;
 
     // Allow keeping the same username
@@ -181,6 +183,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final userService = ref.watch(userServiceProvider);
+    final user = userService.currentUser;
     return Scaffold(
       backgroundColor: Colors.amber[700],
       body: SafeArea(
@@ -428,8 +432,17 @@ class _ProfilePageState extends State<ProfilePage> {
                                     ),
                                     elevation: 0,
                                   ),
-                                  onPressed: () {
+                                  onPressed: () async {
                                     if (_formKey.currentState!.validate()) {
+                                      await ref.read(userServiceProvider).updateUserProfile(
+                                        firstName: _firstNameController.text.trim(),
+                                        lastName: _lastNameController.text.trim(),
+                                        username: _usernameController.text.trim(),
+                                        email: _emailController.text.trim(),
+                                        phoneNumber: _phoneController.text.trim(),
+                                        birthDate: _birthController.text.trim(),
+                                        gender: _selectedGender,
+                                      );
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
                                         SnackBar(

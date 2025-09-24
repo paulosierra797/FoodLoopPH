@@ -1,17 +1,19 @@
 // AddFoodPage widget
 import 'package:flutter/material.dart';
-
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../providers/food_listings_provider.dart';
+import 'main_navigation_screen.dart';
 
-class AddFoodPage extends StatefulWidget {
+class AddFoodPage extends ConsumerStatefulWidget {
   const AddFoodPage({super.key});
 
   @override
-  _AddFoodPageState createState() => _AddFoodPageState();
+  ConsumerState<AddFoodPage> createState() => _AddFoodPageState();
 }
 
-class _AddFoodPageState extends State<AddFoodPage> {
+class _AddFoodPageState extends ConsumerState<AddFoodPage> {
   final _formKey = GlobalKey<FormState>();
   final _foodNameController = TextEditingController();
   final _quantityController = TextEditingController();
@@ -22,6 +24,7 @@ class _AddFoodPageState extends State<AddFoodPage> {
   String _selectedCategory = 'Prepared Food';
   String _selectedExpiry = 'Today';
   bool _isUrgent = false;
+  bool _isSubmitting = false;
 
   final List<String> _categories = [
     'Prepared Food',
@@ -301,21 +304,30 @@ class _AddFoodPageState extends State<AddFoodPage> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          onPressed: _submitDonation,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.volunteer_activism, size: 24),
-                              SizedBox(width: 8),
-                              Text(
-                                'Share Food Donation',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                          onPressed: _isSubmitting ? null : _submitDonation,
+                          child: _isSubmitting
+                              ? SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.volunteer_activism, size: 24),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Share Food Donation',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ],
-                          ),
                         ),
                       ),
 
@@ -486,9 +498,16 @@ class _AddFoodPageState extends State<AddFoodPage> {
   Future<void> _submitDonation() async {
     if (!_formKey.currentState!.validate()) return;
 
+    setState(() {
+      _isSubmitting = true;
+    });
+
     final supabase = Supabase.instance.client;
     final user = supabase.auth.currentUser;
     if (user == null) {
+      setState(() {
+        _isSubmitting = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('You must be logged in to post a donation.')),
       );
@@ -559,8 +578,18 @@ class _AddFoodPageState extends State<AddFoodPage> {
                       ),
                     ),
                     onPressed: () {
+                      // Refresh the food listings provider
+                      ref.invalidate(foodListingsProvider);
+                      // Clear form
+                      _clearForm();
+                      // Close dialog
                       Navigator.of(context).pop();
-                      Navigator.of(context).pop();
+                      // Navigate back to main navigation with specific index (listings page)
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (context) => MainNavigationScreen(),
+                        ),
+                      );
                     },
                     child: Text(
                       'Continue',
@@ -575,11 +604,21 @@ class _AddFoodPageState extends State<AddFoodPage> {
           );
         },
       );
+      
+      setState(() {
+        _isSubmitting = false;
+      });
     } on PostgrestException catch (e) {
+      setState(() {
+        _isSubmitting = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to post donation: ${e.message}')),
       );
     } catch (e) {
+      setState(() {
+        _isSubmitting = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to post donation: $e')),
       );
@@ -603,6 +642,21 @@ class _AddFoodPageState extends State<AddFoodPage> {
       default:
         return now.toIso8601String().split('T').first;
     }
+  }
+
+  // Clear form after successful submission
+  void _clearForm() {
+    _foodNameController.clear();
+    _quantityController.clear();
+    _addressController.clear();
+    _descriptionController.clear();
+    _contactController.clear();
+    setState(() {
+      _selectedCategory = 'Prepared Food';
+      _selectedExpiry = 'Today';
+      _isUrgent = false;
+      _isSubmitting = false;
+    });
   }
 
   @override

@@ -1,114 +1,33 @@
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/food_listings_provider.dart';
 
-class ExplorePage extends StatefulWidget {
+
+class ExplorePage extends ConsumerStatefulWidget {
   const ExplorePage({super.key});
 
   @override
-  _ExplorePageState createState() => _ExplorePageState();
+  ConsumerState<ExplorePage> createState() => _ExplorePageState();
 }
 
-class _ExplorePageState extends State<ExplorePage> {
+class _ExplorePageState extends ConsumerState<ExplorePage> {
   bool _isListView = true;
   String _selectedLocation = 'Dasmariñas, Cavite';
   String _searchQuery = '';
   String _selectedCategory = 'All';
   final TextEditingController _searchController = TextEditingController();
 
-  // Sample food listings data
-  final List<Map<String, dynamic>> _allFoodListings = [
-    {
-      "name": "McDonald's Dasmariñas",
-      "address": "SM City Dasmariñas, Governor's Drive, Dasmariñas, Cavite",
-      "food": "Burgers & Fries",
-      "time": "2 hours ago",
-      "img":
-          "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400",
-      "rating": 4.5,
-      "distance": "1.2 km",
-      "category": "Fast Food",
-      "available": true,
-      "quantity": "5 sets available",
-      "expires": "6 hours"
-    },
-    {
-      "name": "Jollibee Paliparan",
-      "address": "Paliparan Road, Dasmariñas, Cavite",
-      "food": "Chicken & Rice",
-      "time": "4 hours ago",
-      "img":
-          "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400",
-      "rating": 4.8,
-      "distance": "2.1 km",
-      "category": "Fast Food",
-      "available": true,
-      "quantity": "3 sets available",
-      "expires": "4 hours"
-    },
-    {
-      "name": "KFC Tejeros",
-      "address": "Tejeros Convention, Rosario, Cavite",
-      "food": "Fried Chicken",
-      "time": "6 hours ago",
-      "img":
-          "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=400",
-      "rating": 4.3,
-      "distance": "3.5 km",
-      "category": "Fast Food",
-      "available": false,
-      "quantity": "Claimed",
-      "expires": "2 hours"
-    },
-    {
-      "name": "Bread Talk Bacoor",
-      "address": "SM City Bacoor, Aguinaldo Highway, Bacoor, Cavite",
-      "food": "Fresh Bread & Pastries",
-      "time": "3 hours ago",
-      "img": "https://images.unsplash.com/photo-1549931319-a545dcf3bc73?w=400",
-      "rating": 4.6,
-      "distance": "4.2 km",
-      "category": "Bakery",
-      "available": true,
-      "quantity": "10+ items available",
-      "expires": "12 hours"
-    },
-    {
-      "name": "Mang Inasal Imus",
-      "address": "Imus City, Cavite",
-      "food": "Grilled Chicken",
-      "time": "5 hours ago",
-      "img":
-          "https://images.unsplash.com/photo-1532550907401-a500c9a57435?w=400",
-      "rating": 4.4,
-      "distance": "2.8 km",
-      "category": "Filipino",
-      "available": true,
-      "quantity": "2 sets available",
-      "expires": "8 hours"
-    },
-  ];
-
-  List<Map<String, dynamic>> get _filteredListings {
-    return _allFoodListings.where((listing) {
-      bool matchesSearch = _searchQuery.isEmpty ||
-          listing["name"].toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          listing["food"].toLowerCase().contains(_searchQuery.toLowerCase());
-
-      bool matchesCategory = _selectedCategory == 'All' ||
-          listing["category"] == _selectedCategory;
-
-      return matchesSearch && matchesCategory;
-    }).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
+    final listingsAsync = ref.watch(foodListingsProvider);
     return Scaffold(
       body: Container(
         color: Colors.grey[50],
         child: Column(
           children: [
-            // Search and Filter Section
+            // Search and Filter Section (unchanged)
             Container(
               padding: EdgeInsets.all(16),
               color: Colors.white,
@@ -203,7 +122,26 @@ class _ExplorePageState extends State<ExplorePage> {
 
             // Content Area
             Expanded(
-              child: _isListView ? _buildListView() : _buildMapView(),
+              child: listingsAsync.when(
+                data: (listings) {
+                  final filtered = listings.where((listing) {
+                    final name = (listing["name"] ?? '').toString().toLowerCase();
+                    final food = (listing["food"] ?? '').toString().toLowerCase();
+                    final category = (listing["category"] ?? 'Others').toString();
+                    final matchesSearch = _searchQuery.isEmpty ||
+                        name.contains(_searchQuery.toLowerCase()) ||
+                        food.contains(_searchQuery.toLowerCase());
+                    final matchesCategory = _selectedCategory == 'All' ||
+                        category == _selectedCategory;
+                    return matchesSearch && matchesCategory;
+                  }).toList();
+                  return _isListView
+                      ? _buildListView(filtered)
+                      : _buildMapView(filtered);
+                },
+                loading: () => Center(child: CircularProgressIndicator()),
+                error: (e, st) => Center(child: Text('Error loading listings')),
+              ),
             ),
           ],
         ),
@@ -257,18 +195,21 @@ class _ExplorePageState extends State<ExplorePage> {
     );
   }
 
-  Widget _buildListView() {
+  Widget _buildListView(List<Map<String, dynamic>> listings) {
+    if (listings.isEmpty) {
+      return Center(child: Text('No listings found.'));
+    }
     return ListView.builder(
       padding: EdgeInsets.all(16),
-      itemCount: _filteredListings.length,
+      itemCount: listings.length,
       itemBuilder: (context, index) {
-        final listing = _filteredListings[index];
+        final listing = listings[index];
         return _buildFoodCard(listing);
       },
     );
   }
 
-  Widget _buildMapView() {
+  Widget _buildMapView(List<Map<String, dynamic>> listings) {
     return Container(
       child: Stack(
         children: [
@@ -301,12 +242,12 @@ class _ExplorePageState extends State<ExplorePage> {
             ),
           ),
           // Map markers (simulated)
-          ...List.generate(_filteredListings.length, (index) {
+          ...List.generate(listings.length, (index) {
             return Positioned(
               top: 100.0 + (index * 50),
               left: 50.0 + (index * 40),
               child: GestureDetector(
-                onTap: () => _showLocationDetails(_filteredListings[index]),
+                onTap: () => _showLocationDetails(listings[index]),
                 child: Container(
                   padding: EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -331,6 +272,21 @@ class _ExplorePageState extends State<ExplorePage> {
   }
 
   Widget _buildFoodCard(Map<String, dynamic> listing) {
+    String name = (listing["title"] ?? "Unnamed").toString();
+    // images is likely a list or null, so handle accordingly
+    String img = (listing["images"] != null && listing["images"] is List && (listing["images"] as List).isNotEmpty)
+        ? (listing["images"][0] ?? "https://via.placeholder.com/400x150?text=No+Image").toString()
+        : "https://via.placeholder.com/400x150?text=No+Image";
+    String food = (listing["description"] ?? "Unknown food").toString();
+    String quantity = (listing["quantity"] ?? "N/A").toString();
+    String address = (listing["location"] ?? "No address").toString();
+    String time = (listing["expiration_date"] ?? "Unknown time").toString();
+    // No rating in your schema, so set to 0
+    double rating = 0.0;
+    // status: 'available' or 'claimed'
+    String status = (listing["status"] ?? "claimed").toString().toLowerCase();
+    bool available = status == 'available';
+
     return Container(
       margin: EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -351,7 +307,7 @@ class _ExplorePageState extends State<ExplorePage> {
           ClipRRect(
             borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
             child: Image.network(
-              listing["img"],
+              img,
               height: 150,
               width: double.infinity,
               fit: BoxFit.cover,
@@ -377,7 +333,7 @@ class _ExplorePageState extends State<ExplorePage> {
                   children: [
                     Expanded(
                       child: Text(
-                        listing["name"],
+                        name,
                         style: GoogleFonts.poppins(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -388,16 +344,16 @@ class _ExplorePageState extends State<ExplorePage> {
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: listing["available"]
+                        color: available
                             ? Colors.green[100]
                             : Colors.red[100],
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        listing["available"] ? "Available" : "Claimed",
+                        available ? "Available" : "Claimed",
                         style: GoogleFonts.poppins(
                           fontSize: 12,
-                          color: listing["available"]
+                          color: available
                               ? Colors.green[700]
                               : Colors.red[700],
                           fontWeight: FontWeight.w500,
@@ -411,7 +367,7 @@ class _ExplorePageState extends State<ExplorePage> {
 
                 // Food and Quantity
                 Text(
-                  listing["food"],
+                  food,
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     color: Colors.orange[600],
@@ -420,7 +376,7 @@ class _ExplorePageState extends State<ExplorePage> {
                 ),
 
                 Text(
-                  listing["quantity"],
+                  quantity,
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     color: Colors.grey[600],
@@ -436,7 +392,7 @@ class _ExplorePageState extends State<ExplorePage> {
                     SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        listing["address"],
+                        address,
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: Colors.grey[600],
@@ -458,7 +414,7 @@ class _ExplorePageState extends State<ExplorePage> {
                         Icon(Icons.star, size: 14, color: Colors.amber),
                         SizedBox(width: 4),
                         Text(
-                          listing["rating"].toString(),
+                          rating.toString(),
                           style: GoogleFonts.poppins(
                             fontSize: 12,
                             color: Colors.grey[600],
@@ -473,7 +429,7 @@ class _ExplorePageState extends State<ExplorePage> {
                             size: 14, color: Colors.grey[500]),
                         SizedBox(width: 4),
                         Text(
-                          listing["time"],
+                          time,
                           style: GoogleFonts.poppins(
                             fontSize: 12,
                             color: Colors.grey[600],
@@ -482,7 +438,7 @@ class _ExplorePageState extends State<ExplorePage> {
                       ],
                     ),
                     Spacer(),
-                    if (listing["available"])
+                    if (available)
                       ElevatedButton(
                         onPressed: () => _claimFood(listing),
                         style: ElevatedButton.styleFrom(

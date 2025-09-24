@@ -1,6 +1,7 @@
 // ChangePasswordPage widget
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
@@ -258,16 +259,38 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                                     ),
                                     elevation: 0,
                                   ),
-                                  onPressed: () {
-                                    if (_formKey.currentState!.validate() &&
-                                        _isPasswordValid) {
-                                      _showSuccessDialog();
+                                  onPressed: () async {
+                                    if (_formKey.currentState!.validate() && _isPasswordValid) {
+                                      final supabase = Supabase.instance.client;
+                                      try {
+                                        // Optionally, you can check the current password by re-authenticating
+                                        final newPassword = _newPasswordController.text.trim();
+                                        final response = await supabase.auth.updateUser(
+                                          UserAttributes(password: newPassword),
+                                        );
+                                        if (response.user != null) {
+                                          _showSuccessDialog();
+                                        } else {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Failed to change password.'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Error: ' + e.toString()),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
                                     } else if (!_isPasswordValid) {
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
                                         SnackBar(
-                                          content: Text(
-                                              'Please meet all password requirements'),
+                                          content: Text('Please meet all password requirements'),
                                           backgroundColor: Colors.red,
                                         ),
                                       );

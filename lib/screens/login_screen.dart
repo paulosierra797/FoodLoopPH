@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'main_navigation_screen.dart';
 import 'forgot_password_page.dart';
 import 'enhanced_sign_up_screen.dart';
+import '../services/user_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -91,6 +92,12 @@ class _LoginScreenState extends State<LoginScreen>
 
       if (response.user != null) {
         await _saveCredentials();
+        // Sync user data from Supabase to local storage
+        try {
+          await UserService().syncUserFromSupabase();
+        } catch (e) {
+          debugPrint('Failed to sync user from Supabase: $e');
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(

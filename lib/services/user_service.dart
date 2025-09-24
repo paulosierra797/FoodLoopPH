@@ -3,25 +3,58 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
-import '../models/user_model.dart';
+import '../models/user_model.dart' as app_model;
+
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class UserService extends ChangeNotifier {
   static final UserService _instance = UserService._internal();
   factory UserService() => _instance;
   UserService._internal();
 
-  User? _currentUser;
-  List<User> _nearbyUsers = [];
+  app_model.User? _currentUser;
+  List<app_model.User> _nearbyUsers = [];
   bool _isLocationServiceEnabled = false;
 
-  User? get currentUser => _currentUser;
-  List<User> get nearbyUsers => _nearbyUsers;
+  app_model.User? get currentUser => _currentUser;
+  List<app_model.User> get nearbyUsers => _nearbyUsers;
   bool get isLocationServiceEnabled => _isLocationServiceEnabled;
 
   // Initialize user service
   Future<void> initialize() async {
     await _loadUserFromStorage();
     await _checkLocationPermission();
+  }
+
+  // Fetch user data from Supabase and update local storage
+  Future<void> syncUserFromSupabase() async {
+    final supabase = Supabase.instance.client;
+    final authUser = supabase.auth.currentUser;
+    if (authUser == null) return;
+    final response = await supabase
+        .from('users')
+        .select()
+        .eq('id', authUser.id)
+        .single();
+    // Map Supabase fields to User model fields
+  final data = response;
+    _currentUser = app_model.User(
+      id: data['id'] ?? authUser.id,
+      firstName: data['first_name'] ?? '',
+      lastName: data['last_name'] ?? '',
+      username: data['username'] ?? '',
+      email: data['email'] ?? authUser.email ?? '',
+      phoneNumber: data['phone_number'] ?? '',
+      birthDate: data['birth_date'],
+      gender: data['gender'],
+      isLocationSharingEnabled: data['is_location_sharing_enabled'] ?? false,
+      latitude: data['latitude'] != null ? (data['latitude'] as num).toDouble() : null,
+      longitude: data['longitude'] != null ? (data['longitude'] as num).toDouble() : null,
+      address: data['address'],
+      lastLocationUpdate: data['last_location_update'] != null ? DateTime.tryParse(data['last_location_update']) : null,
+    );
+    await _saveUserToStorage();
+    notifyListeners();
   }
 
   // Load user from local storage
@@ -31,7 +64,7 @@ class UserService extends ChangeNotifier {
       final userJson = prefs.getString('current_user');
       if (userJson != null) {
         final userMap = jsonDecode(userJson);
-        _currentUser = User.fromJson(userMap);
+        _currentUser = app_model.User.fromJson(userMap);
         notifyListeners();
       }
     } catch (e) {
@@ -61,7 +94,7 @@ class UserService extends ChangeNotifier {
     required String phoneNumber,
     required String password,
   }) async {
-    _currentUser = User(
+    _currentUser = app_model.User(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       firstName: firstName,
       lastName: lastName,
@@ -91,15 +124,50 @@ class UserService extends ChangeNotifier {
     String? gender,
   }) async {
     if (_currentUser != null) {
+      // Convert birthDate to YYYY-MM-DD if needed
+      String? formattedBirthDate = birthDate;
+      if (birthDate != null && birthDate.contains('/')) {
+        try {
+          final parts = birthDate.split('/');
+          if (parts.length == 3) {
+            // Accepts both d/m/yyyy and dd/mm/yyyy
+            final day = parts[0].padLeft(2, '0');
+            final month = parts[1].padLeft(2, '0');
+            final year = parts[2];
+            formattedBirthDate = '$year-$month-$day';
+          }
+        } catch (_) {}
+      }
+
+      // Update local user model
       _currentUser = _currentUser!.copyWith(
         firstName: firstName,
         lastName: lastName,
         username: username,
         email: email,
         phoneNumber: phoneNumber,
-        birthDate: birthDate,
+        birthDate: formattedBirthDate,
         gender: gender,
       );
+
+      // Update Supabase users table
+      final supabase = Supabase.instance.client;
+      final userId = _currentUser!.id;
+      final updateData = {
+        'first_name': firstName,
+        'last_name': lastName,
+        'username': username,
+        'email': email,
+        'phone_number': phoneNumber,
+        'birth_date': formattedBirthDate,
+        'sex': gender,
+      };
+      // Remove nulls so we don't overwrite with null
+      updateData.removeWhere((key, value) => value == null);
+      await supabase
+          .from('users')
+          .update(updateData)
+          .eq('id', userId);
 
       await _saveUserToStorage();
       notifyListeners();
@@ -219,7 +287,7 @@ class UserService extends ChangeNotifier {
   void loadNearbyUsers() {
     // Demo data for nearby users
     _nearbyUsers = [
-      User(
+      app_model.User(
         id: '2',
         firstName: 'Carlos',
         lastName: 'Santos',
@@ -232,7 +300,7 @@ class UserService extends ChangeNotifier {
         address: 'Dasmariñas, Cavite',
         lastLocationUpdate: DateTime.now().subtract(Duration(minutes: 5)),
       ),
-      User(
+      app_model.User(
         id: '3',
         firstName: 'Juan',
         lastName: 'Dela Cruz',
@@ -245,7 +313,7 @@ class UserService extends ChangeNotifier {
         address: 'Imus, Cavite',
         lastLocationUpdate: DateTime.now().subtract(Duration(minutes: 2)),
       ),
-      User(
+      app_model.User(
         id: '4',
         firstName: 'Ana',
         lastName: 'Rodriguez',

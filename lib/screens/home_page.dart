@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/user_service_provider.dart';
-import 'explore_page.dart';
+import 'explore_page_full.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
