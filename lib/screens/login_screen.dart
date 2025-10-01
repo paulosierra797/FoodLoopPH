@@ -6,6 +6,7 @@ import 'main_navigation_screen.dart';
 import 'forgot_password_page.dart';
 import 'enhanced_sign_up_screen.dart';
 import '../services/user_service.dart';
+import 'admin_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -153,23 +154,36 @@ class _LoginScreenState extends State<LoginScreen>
         } catch (e) {
           debugPrint('⚠️ Failed to sync user from Supabase: $e');
         }
+
+        // Check if the user is an admin
+        final userMetadata = response.user?.userMetadata;
+        final isAdmin = userMetadata != null && userMetadata['role'] == 'admin';
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
                 SizedBox(width: 8),
-                Text('Welcome to FoodLoop PH!'),
+                Text(isAdmin ? 'Welcome Admin!' : 'Welcome to FoodLoop PH!'),
               ],
             ),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
           ),
         );
+<<<<<<< HEAD
         debugPrint('✅ SUCCESS: Navigating to MainNavigationScreen');
+=======
+
+>>>>>>> 3c5e93d5baa68a56df3bcf5dadfab265540a68d2
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
+          MaterialPageRoute(
+            builder: (context) => isAdmin
+                ? const AdminDashboardScreen()
+                : const MainNavigationScreen(),
+          ),
         );
       } else {
         debugPrint('❌ FAILED: response.user is null');
