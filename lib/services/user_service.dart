@@ -31,27 +31,43 @@ class UserService extends ChangeNotifier {
     final supabase = Supabase.instance.client;
     final authUser = supabase.auth.currentUser;
     if (authUser == null) return;
-    final response = await supabase
-        .from('users')
-        .select()
-        .eq('id', authUser.id)
-        .single();
-    // Map Supabase fields to User model fields
-  final data = response;
+    Map<String, dynamic>? data;
+    try {
+      final resp = await supabase
+          .from('users')
+          .select()
+          .eq('id', authUser.id)
+          .maybeSingle();
+      if (resp != null) {
+        data = Map<String, dynamic>.from(resp as Map);
+      }
+    } catch (e) {
+      debugPrint('syncUserFromSupabase: SELECT failed, falling back to auth metadata: $e');
+    }
+
+    final meta = authUser.userMetadata ?? {};
+    final firstName = (data?['first_name'] ?? meta['first_name'] ?? '').toString();
+    final lastName = (data?['last_name'] ?? meta['last_name'] ?? '').toString();
+    final username = (data?['username'] ?? meta['username'] ?? '').toString();
+    final phone = (data?['phone_number'] ?? meta['phone_number'] ?? '').toString();
+    final email = (data?['email'] ?? authUser.email ?? '').toString();
+    final birthDate = data?['birth_date'];
+    final gender = data?['sex'];
+
     _currentUser = app_model.User(
-      id: data['id'] ?? authUser.id,
-      firstName: data['first_name'] ?? '',
-      lastName: data['last_name'] ?? '',
-      username: data['username'] ?? '',
-      email: data['email'] ?? authUser.email ?? '',
-      phoneNumber: data['phone_number'] ?? '',
-      birthDate: data['birth_date'],
-      gender: data['gender'],
-      isLocationSharingEnabled: data['is_location_sharing_enabled'] ?? false,
-      latitude: data['latitude'] != null ? (data['latitude'] as num).toDouble() : null,
-      longitude: data['longitude'] != null ? (data['longitude'] as num).toDouble() : null,
-      address: data['address'],
-      lastLocationUpdate: data['last_location_update'] != null ? DateTime.tryParse(data['last_location_update']) : null,
+      id: (data?['id'] ?? authUser.id).toString(),
+      firstName: firstName,
+      lastName: lastName,
+      username: username,
+      email: email,
+      phoneNumber: phone,
+      birthDate: birthDate,
+      gender: gender,
+      isLocationSharingEnabled: false,
+      latitude: null,
+      longitude: null,
+      address: null,
+      lastLocationUpdate: null,
     );
     await _saveUserToStorage();
     notifyListeners();

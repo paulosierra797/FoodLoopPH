@@ -5,13 +5,13 @@ FoodLoop PH now features a comprehensive, secure authentication system with mode
 
 ## 🚀 Features Implemented
 
-### 1. **Enhanced Login Screen** (`enhanced_login_screen.dart`)
+### 1. **Login Screen** (`login_screen.dart`)
 - Modern, animated login interface with Material Design
 - Real-time input validation with visual feedback
 - Rate limiting for security (15-minute lockout after 5 failed attempts)
 - Haptic feedback and smooth animations
 - "Remember Me" functionality
-- Integration with AuthService for seamless authentication
+- Integration with Supabase authentication
 
 ### 2. **Comprehensive Authentication Service** (`auth_service.dart`)
 - **No Demo Credentials**: Users must register to create accounts
@@ -186,7 +186,7 @@ lib/
 │   └── notification_service.dart      # Notification handling
 └── screens/
     ├── landing_page.dart              # App introduction screen
-    ├── enhanced_login_screen.dart     # Main login interface
+    ├── login_screen.dart              # Main login interface
     ├── sign_up_screen.dart            # Registration with password requirements
     ├── forgot_password_page.dart      # Password recovery start
     ├── otp_verification_page.dart     # OTP input and validation

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'main_navigation_screen.dart';
 import 'login_screen.dart';
 import 'dart:async';
 
@@ -300,20 +299,41 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
           'first_name': _firstNameController.text.trim(),
           'last_name': _lastNameController.text.trim(),
           'phone_number': _phoneController.text.trim(),
-        }
+        },
+        emailRedirectTo: 'com.example.foodloopph://auth/callback',
       );
 
       final user = authResponse.user;
       if (user == null) throw Exception('Sign up failed.');
 
-      // Do NOT insert into users table here. Wait for email verification and login.
+      // Create user profile in users table immediately after Auth user creation
+      debugPrint('✅ Auth user created: ${user.id}');
+      debugPrint('📝 Creating user profile in users table...');
+      
+      try {
+        await supabase.from('users').insert({
+          'id': user.id,
+          'email': email,
+          'first_name': _firstNameController.text.trim(),
+          'last_name': _lastNameController.text.trim(),
+          'username': _usernameController.text.trim(),
+          'phone_number': _phoneController.text.trim(),
+          'role': 'user',
+        });
+        debugPrint('✅ User profile created in users table');
+      } catch (e) {
+        debugPrint('⚠️ Failed to create user profile: $e');
+        // Don't fail the signup if profile creation fails
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
               Icon(Icons.check_circle, color: Colors.white),
               SizedBox(width: 8),
-              Text('Registration successful! Please check your email to verify your account.'),
+              Expanded(
+                child: Text('Registration successful! Please check your email to verify your account.'),
+              ),
             ],
           ),
           backgroundColor: Colors.green,

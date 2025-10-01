@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../widgets/password_requirements_widget.dart';
-import 'enhanced_login_screen.dart';
+import 'login_screen.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   final String identifier; // email or phone
@@ -183,7 +183,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> with TickerProvid
               ),
               onPressed: () {
                 Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => EnhancedLoginScreen()),
+                  MaterialPageRoute(builder: (context) => LoginScreen()),
                   (route) => false,
                 );
               },

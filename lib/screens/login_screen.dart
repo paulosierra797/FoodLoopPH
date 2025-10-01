@@ -83,20 +83,75 @@ class _LoginScreenState extends State<LoginScreen>
     });
 
     final supabase = Supabase.instance.client;
+    
+    // Debug: Log sign-in attempt
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    debugPrint('🔐 SIGN-IN ATTEMPT:');
+    debugPrint('Email: $email');
+    debugPrint('Password length: ${password.length}');
+    debugPrint('Supabase client ready for sign-in');
+
+    // Check if user exists in users table first
+    try {
+      debugPrint('🔍 Checking if user exists in users table...');
+      final userCheck = await supabase
+          .from('users')
+          .select('email, id')
+          .eq('email', email)
+          .maybeSingle();
+      
+      if (userCheck != null) {
+        debugPrint('✅ User found in users table: ${userCheck['id']}');
+      } else {
+        debugPrint('❌ User NOT found in users table');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error checking users table: $e');
+    }
 
     try {
+      debugPrint('🚀 Calling supabase.auth.signInWithPassword...');
       final response = await supabase.auth.signInWithPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+        email: email,
+        password: password,
       );
+
+      // Debug: Log detailed response info
+      debugPrint('Supabase signIn response: $response');
+      try {
+        debugPrint('Supabase signIn user: ${response.user}');
+        debugPrint('Supabase signIn session: ${response.session}');
+      } catch (_) {}
+      
+      // Check current client state after sign-in
+      try {
+        final currentUser = supabase.auth.currentUser;
+        final currentSession = supabase.auth.currentSession;
+        debugPrint('supabase.auth.currentUser: $currentUser');
+        debugPrint('supabase.auth.currentSession: $currentSession');
+      } catch (_) {}
 
       if (response.user != null) {
         await _saveCredentials();
+        
+        // Update last sign in time in database
+        try {
+          await supabase.from('users').update({
+            'last_sign_in_at': DateTime.now().toIso8601String(),
+          }).eq('id', response.user!.id);
+          debugPrint('✅ Updated last sign in time');
+        } catch (e) {
+          debugPrint('⚠️ Failed to update last sign in time: $e');
+        }
+        
         // Sync user data from Supabase to local storage
+        debugPrint('🔄 Attempting to sync user from Supabase...');
         try {
           await UserService().syncUserFromSupabase();
+          debugPrint('✅ User sync completed successfully');
         } catch (e) {
-          debugPrint('Failed to sync user from Supabase: $e');
+          debugPrint('⚠️ Failed to sync user from Supabase: $e');
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -111,21 +166,28 @@ class _LoginScreenState extends State<LoginScreen>
             duration: Duration(seconds: 2),
           ),
         );
+        debugPrint('✅ SUCCESS: Navigating to MainNavigationScreen');
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
         );
       } else {
+        debugPrint('❌ FAILED: response.user is null');
         setState(() {
           _errorMessage =
               'Invalid email or password. Please check your credentials and try again.';
         });
       }
     } on AuthException catch (e) {
+      debugPrint('🚨 AuthException caught: ${e.message}');
+      debugPrint('AuthException statusCode: ${e.statusCode}');
+      debugPrint('AuthException full error: $e');
       setState(() {
         _errorMessage = e.message;
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('💥 Unexpected exception caught: $e');
+      debugPrint('Stack trace: $stackTrace');
       setState(() {
         _errorMessage = 'Unexpected error: $e';
       });
