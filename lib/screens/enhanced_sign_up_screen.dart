@@ -305,25 +305,16 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
       final user = authResponse.user;
       if (user == null) throw Exception('Sign up failed.');
 
-      // Create user profile in users table immediately after Auth user creation
-      debugPrint('✅ Auth user created: ${user.id}');
-      debugPrint('📝 Creating user profile in users table...');
+      // Insert user details into the Supabase users table
+      await supabase.from('users').insert({
+        'id': user.id,
+        'first_name': _firstNameController.text.trim(),
+        'last_name': _lastNameController.text.trim(),
+        'username': _usernameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'phone_number': _phoneController.text.trim(),
+      });
 
-      try {
-        await supabase.from('users').insert({
-          'id': user.id,
-          'email': email,
-          'first_name': _firstNameController.text.trim(),
-          'last_name': _lastNameController.text.trim(),
-          'username': _usernameController.text.trim(),
-          'phone_number': _phoneController.text.trim(),
-          'role': 'user',
-        });
-        debugPrint('✅ User profile created in users table');
-      } catch (e) {
-        debugPrint('⚠️ Failed to create user profile: $e');
-        // Don't fail the signup if profile creation fails
-      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
