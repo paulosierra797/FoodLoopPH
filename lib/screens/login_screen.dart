@@ -156,8 +156,15 @@ class _LoginScreenState extends State<LoginScreen>
         }
 
         // Check if the user is an admin
-        final userMetadata = response.user?.userMetadata;
-        final isAdmin = userMetadata != null && userMetadata['role'] == 'admin';
+        // Fetch user role from the users table
+        final userId = response.user!.id;
+        final userResponse = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', userId)
+            .single();
+
+        final isAdmin = userResponse['role'] == 'admin';
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

@@ -305,8 +305,9 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
       final user = authResponse.user;
       if (user == null) throw Exception('Sign up failed.');
 
-<<<<<<< HEAD
-      // Create user profile in users table immediately after Auth user creation
+      // Create user profile in users table immediately after Auth user creation.
+      // We attempt the insert but do not fail the whole signup flow if it fails
+      // (e.g., RLS, rate limits or other issues may prevent the insert).
       debugPrint('✅ Auth user created: ${user.id}');
       debugPrint('📝 Creating user profile in users table...');
 
@@ -325,19 +326,6 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
         debugPrint('⚠️ Failed to create user profile: $e');
         // Don't fail the signup if profile creation fails
       }
-=======
-      // Insert user details into the Supabase users table
-      await supabase.from('users').insert({
-        'id': user.id,
-        'first_name': _firstNameController.text.trim(),
-        'last_name': _lastNameController.text.trim(),
-        'username': _usernameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'phone_number': _phoneController.text.trim(),
-      });
-
-      // Do NOT insert into users table here. Wait for email verification and login.
->>>>>>> 3c5e93d5baa68a56df3bcf5dadfab265540a68d2
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
