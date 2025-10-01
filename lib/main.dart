@@ -61,7 +61,8 @@ class FoodLoopApp extends StatelessWidget {
         primarySwatch: Colors.amber,
         fontFamily: GoogleFonts.poppins().fontFamily,
       ),
-      home: initialSession != null ? MainNavigationScreen() : LandingPage(),
+      // Always start at LandingPage. Users will proceed to Sign In from there.
+      home: LandingPage(),
     );
   }
 }

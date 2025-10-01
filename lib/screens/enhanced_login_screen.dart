@@ -8,6 +8,7 @@ import 'forgot_password_page.dart';
 import 'enhanced_sign_up_screen.dart';
 import '../services/auth_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'admin_dashboard_screen.dart';
 
 class EnhancedLoginScreen extends StatefulWidget {
   const EnhancedLoginScreen({super.key});
@@ -73,9 +74,34 @@ class _EnhancedLoginScreenState extends State<EnhancedLoginScreen>
           password: _passwordController.text.trim(),
         );
         if (response.user != null) {
+          // Determine if the logged-in user is an admin from user metadata
+          final userMetadata = response.user?.userMetadata;
+          final bool isAdmin =
+              userMetadata != null && userMetadata['role'] == 'admin';
+
+          // Optional feedback
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text(isAdmin ? 'Welcome Admin!' : 'Welcome back!'),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+
+          // Navigate based on role
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => MainNavigationScreen()),
+            MaterialPageRoute(
+              builder: (context) => isAdmin
+                  ? const AdminDashboardScreen()
+                  : const MainNavigationScreen(),
+            ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(

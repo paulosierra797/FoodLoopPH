@@ -102,7 +102,31 @@ class _LoginScreenState extends State<LoginScreen>
 
         // Check if the user is an admin
         final userMetadata = response.user?.userMetadata;
-        final isAdmin = userMetadata != null && userMetadata['role'] == 'admin';
+        bool isAdmin = false;
+        if (userMetadata != null) {
+          final metaRole = userMetadata['role']?.toString().toLowerCase();
+          if (metaRole == 'admin') isAdmin = true;
+        }
+
+        // Fallback: check users table for role (simple and reliable)
+        if (!isAdmin) {
+          try {
+            final authUserId = response.user!.id;
+            final row = await supabase
+                .from('users')
+                .select('role')
+                .eq('id', authUserId)
+                .maybeSingle();
+            if (row != null) {
+              final tableRole = row['role']?.toString().toLowerCase();
+              if (tableRole == 'admin') {
+                isAdmin = true;
+              }
+            }
+          } catch (e) {
+            debugPrint('Admin role check failed: $e');
+          }
+        }
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
