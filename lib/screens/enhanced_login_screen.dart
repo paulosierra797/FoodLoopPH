@@ -8,6 +8,7 @@ import 'forgot_password_page.dart';
 import 'enhanced_sign_up_screen.dart';
 import '../services/auth_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'admin_dashboard_screen.dart';
 
 class EnhancedLoginScreen extends StatefulWidget {
   const EnhancedLoginScreen({super.key});
@@ -72,17 +73,94 @@ class _EnhancedLoginScreenState extends State<EnhancedLoginScreen>
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
+
+        // Debug: surface detailed response so we can see why login fails
+        debugPrint('Supabase signIn response: $response');
+        try {
+          debugPrint('Supabase signIn user: ${response.user}');
+        } catch (_) {}
+        try {
+          debugPrint('Supabase signIn session: ${response.session}');
+        } catch (_) {}
+        try {
+          // Some Supabase response objects implement toJson(); try that first
+          try {
+            final json = (response as dynamic).toJson();
+            debugPrint('Supabase signIn toJson: $json');
+          } catch (_) {
+            debugPrint('Supabase signIn toString: ${response.toString()}');
+          }
+        } catch (_) {}
+
+        // Try to extract a useful error message if present
+        String? errorMessage;
+        try {
+          final dyn = response as dynamic;
+          if (dyn.error != null) {
+            // Try common properties
+            try {
+              errorMessage = dyn.error.message?.toString();
+            } catch (_) {
+              errorMessage = dyn.error.toString();
+            }
+          }
+        } catch (_) {
+          // ignore extraction errors
+        }
+
+        // Extra check: inspect Supabase client state after sign-in to catch cases
+        // where the response is unexpected but the client has a session/user.
+        try {
+          final currentUser = supabase.auth.currentUser;
+          final currentSession = supabase.auth.currentSession;
+          debugPrint('supabase.auth.currentUser: $currentUser');
+          debugPrint('supabase.auth.currentSession: $currentSession');
+        } catch (_) {}
+
         if (response.user != null) {
+          // Determine if the logged-in user is an admin from user metadata
+          final userMetadata = response.user?.userMetadata;
+          final bool isAdmin =
+              userMetadata != null && userMetadata['role'] == 'admin';
+
+          // Optional feedback
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text(isAdmin ? 'Welcome Admin!' : 'Welcome back!'),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+
+          // Navigate based on role
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => MainNavigationScreen()),
+            MaterialPageRoute(
+              builder: (context) => isAdmin
+                  ? const AdminDashboardScreen()
+                  : const MainNavigationScreen(),
+            ),
           );
         } else {
+          final display = errorMessage ?? response.toString();
+          setState(() => _errorMessage = display);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Login failed. Please check your credentials.')),
+            SnackBar(
+                content: Text(
+                    'Login failed: ${display.length > 200 ? display.substring(0, 200) + "..." : display}')),
           );
         }
-      } catch (e) {
+      } catch (e, st) {
+        // Show the caught exception and set local error message for UI
+        debugPrint('Exception during signIn: $e');
+        debugPrint('$st');
+        setState(() => _errorMessage = e.toString());
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: ${e.toString()}')),
         );
@@ -90,9 +168,6 @@ class _EnhancedLoginScreenState extends State<EnhancedLoginScreen>
       setState(() => _isLoading = false);
     }
   }
-    
-
-
 
   @override
   Widget build(BuildContext context) {
