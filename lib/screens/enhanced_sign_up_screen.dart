@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -250,13 +249,17 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
     if (!_formKey.currentState!.validate()) return;
     if (!_agreedToTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please agree to the Terms and Conditions'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('Please agree to the Terms and Conditions'),
+            backgroundColor: Colors.red),
       );
       return;
     }
     if (!_isUsernameAvailable) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please choose a different username'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('Please choose a different username'),
+            backgroundColor: Colors.red),
       );
       return;
     }
@@ -267,25 +270,21 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
     try {
       final email = _emailController.text.trim();
       final password = _passwordController.text.trim();
-      
+
       // Check if user already exists
       try {
-        await supabase
-            .from('users')
-            .select()
-            .eq('email', email)
-            .single();
-            
+        await supabase.from('users').select().eq('email', email).single();
+
         // If we get here, user exists
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('This email is already registered. Please sign in instead.'),
+            content: Text(
+                'This email is already registered. Please sign in instead.'),
             backgroundColor: Colors.red,
           ),
         );
         return;
-        
       } catch (_) {
         // No user found, continue with registration
       }
@@ -309,7 +308,7 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
       // Create user profile in users table immediately after Auth user creation
       debugPrint('✅ Auth user created: ${user.id}');
       debugPrint('📝 Creating user profile in users table...');
-      
+
       try {
         await supabase.from('users').insert({
           'id': user.id,
@@ -332,7 +331,8 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
               Icon(Icons.check_circle, color: Colors.white),
               SizedBox(width: 8),
               Expanded(
-                child: Text('Registration successful! Please check your email to verify your account.'),
+                child: Text(
+                    'Registration successful! Please check your email to verify your account.'),
               ),
             ],
           ),
@@ -347,7 +347,9 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Registration failed. Please try again.'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('Registration failed. Please try again.'),
+            backgroundColor: Colors.red),
       );
     } finally {
       setState(() => _isLoading = false);

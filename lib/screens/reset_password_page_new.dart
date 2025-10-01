@@ -18,15 +18,16 @@ class ResetPasswordPage extends StatefulWidget {
   _ResetPasswordPageState createState() => _ResetPasswordPageState();
 }
 
-class _ResetPasswordPageState extends State<ResetPasswordPage> with TickerProviderStateMixin {
+class _ResetPasswordPageState extends State<ResetPasswordPage>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  
+
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
   bool _isPasswordValid = false;
-  
+
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -34,20 +35,21 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> with TickerProvid
   @override
   void initState() {
     super.initState();
-    
+
     _animationController = AnimationController(
       duration: Duration(milliseconds: 1000),
       vsync: this,
     );
-    
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
-    
-    _slideAnimation = Tween<Offset>(begin: Offset(0, 0.5), end: Offset.zero).animate(
+
+    _slideAnimation =
+        Tween<Offset>(begin: Offset(0, 0.5), end: Offset.zero).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack),
     );
-    
+
     _animationController.forward();
   }
 
@@ -224,9 +226,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> with TickerProvid
                         height: 1.5,
                       ),
                     ),
-                    
+
                     SizedBox(height: 40),
-                    
+
                     // New Password Field with Requirements
                     PasswordStrengthField(
                       controller: _passwordController,
@@ -239,9 +241,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> with TickerProvid
                         });
                       },
                     ),
-                    
+
                     SizedBox(height: 24),
-                    
+
                     // Confirm Password Field
                     TextFormField(
                       controller: _confirmPasswordController,
@@ -249,13 +251,18 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> with TickerProvid
                       decoration: InputDecoration(
                         labelText: "Confirm New Password",
                         hintText: "Re-enter your new password",
-                        prefixIcon: Icon(Icons.lock_outline, color: Colors.grey),
+                        prefixIcon:
+                            Icon(Icons.lock_outline, color: Colors.grey),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                            _obscureConfirmPassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
                             color: Colors.grey,
                           ),
-                          onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                          onPressed: () => setState(() =>
+                              _obscureConfirmPassword =
+                                  !_obscureConfirmPassword),
                         ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -267,7 +274,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> with TickerProvid
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.amber[700]!, width: 2),
+                          borderSide:
+                              BorderSide(color: Colors.amber[700]!, width: 2),
                         ),
                         filled: true,
                         fillColor: Colors.grey[50],
@@ -282,24 +290,30 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> with TickerProvid
                         return null;
                       },
                     ),
-                    
+
                     SizedBox(height: 40),
-                    
+
                     // Reset Password Button
                     SizedBox(
                       width: double.infinity,
                       height: 56,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _isPasswordValid ? Colors.amber[700] : Colors.grey[400],
+                          backgroundColor: _isPasswordValid
+                              ? Colors.amber[700]
+                              : Colors.grey[400],
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
                           elevation: _isPasswordValid ? 4 : 0,
-                          shadowColor: _isPasswordValid ? Colors.amber[700]!.withOpacity(0.3) : Colors.transparent,
+                          shadowColor: _isPasswordValid
+                              ? Colors.amber[700]!.withOpacity(0.3)
+                              : Colors.transparent,
                         ),
-                        onPressed: (_isLoading || !_isPasswordValid) ? null : _resetPassword,
+                        onPressed: (_isLoading || !_isPasswordValid)
+                            ? null
+                            : _resetPassword,
                         child: _isLoading
                             ? SizedBox(
                                 height: 24,
@@ -318,9 +332,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> with TickerProvid
                               ),
                       ),
                     ),
-                    
+
                     SizedBox(height: 20),
-                    
+
                     // Security Note
                     Container(
                       padding: EdgeInsets.all(16),
@@ -331,7 +345,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> with TickerProvid
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.security, color: Colors.blue[600], size: 20),
+                          Icon(Icons.security,
+                              color: Colors.blue[600], size: 20),
                           SizedBox(width: 12),
                           Expanded(
                             child: Text(

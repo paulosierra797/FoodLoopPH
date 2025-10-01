@@ -42,14 +42,17 @@ class UserService extends ChangeNotifier {
         data = Map<String, dynamic>.from(resp as Map);
       }
     } catch (e) {
-      debugPrint('syncUserFromSupabase: SELECT failed, falling back to auth metadata: $e');
+      debugPrint(
+          'syncUserFromSupabase: SELECT failed, falling back to auth metadata: $e');
     }
 
     final meta = authUser.userMetadata ?? {};
-    final firstName = (data?['first_name'] ?? meta['first_name'] ?? '').toString();
+    final firstName =
+        (data?['first_name'] ?? meta['first_name'] ?? '').toString();
     final lastName = (data?['last_name'] ?? meta['last_name'] ?? '').toString();
     final username = (data?['username'] ?? meta['username'] ?? '').toString();
-    final phone = (data?['phone_number'] ?? meta['phone_number'] ?? '').toString();
+    final phone =
+        (data?['phone_number'] ?? meta['phone_number'] ?? '').toString();
     final email = (data?['email'] ?? authUser.email ?? '').toString();
     final birthDate = data?['birth_date'];
     final gender = data?['sex'];
@@ -180,10 +183,7 @@ class UserService extends ChangeNotifier {
       };
       // Remove nulls so we don't overwrite with null
       updateData.removeWhere((key, value) => value == null);
-      await supabase
-          .from('users')
-          .update(updateData)
-          .eq('id', userId);
+      await supabase.from('users').update(updateData).eq('id', userId);
 
       await _saveUserToStorage();
       notifyListeners();

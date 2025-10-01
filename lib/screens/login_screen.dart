@@ -83,7 +83,7 @@ class _LoginScreenState extends State<LoginScreen>
     });
 
     final supabase = Supabase.instance.client;
-    
+
     // Debug: Log sign-in attempt
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
@@ -100,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen>
           .select('email, id')
           .eq('email', email)
           .maybeSingle();
-      
+
       if (userCheck != null) {
         debugPrint('✅ User found in users table: ${userCheck['id']}');
       } else {
@@ -123,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen>
         debugPrint('Supabase signIn user: ${response.user}');
         debugPrint('Supabase signIn session: ${response.session}');
       } catch (_) {}
-      
+
       // Check current client state after sign-in
       try {
         final currentUser = supabase.auth.currentUser;
@@ -134,7 +134,7 @@ class _LoginScreenState extends State<LoginScreen>
 
       if (response.user != null) {
         await _saveCredentials();
-        
+
         // Update last sign in time in database
         try {
           await supabase.from('users').update({
@@ -144,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen>
         } catch (e) {
           debugPrint('⚠️ Failed to update last sign in time: $e');
         }
-        
+
         // Sync user data from Supabase to local storage
         debugPrint('🔄 Attempting to sync user from Supabase...');
         try {
