@@ -1,14 +1,13 @@
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'utils/dbcon.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_links/app_links.dart';
 import 'screens/landing_page.dart';
 import 'screens/main_navigation_screen.dart';
 import 'services/user_service.dart';
 import 'services/notification_service.dart';
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,7 +39,7 @@ void main() async {
   );
 }
 
-class FoodLoopApp extends StatelessWidget {
+class FoodLoopApp extends StatefulWidget {
   final UserService userService;
   final NotificationService notificationService;
   final Session? initialSession;
@@ -51,6 +50,106 @@ class FoodLoopApp extends StatelessWidget {
     required this.notificationService,
     this.initialSession,
   });
+
+  @override
+  _FoodLoopAppState createState() => _FoodLoopAppState();
+}
+
+class _FoodLoopAppState extends State<FoodLoopApp> {
+  late final AppLinks _appLinks;
+
+  @override
+  void initState() {
+    super.initState();
+    _initDeepLinks();
+  }
+
+  void _initDeepLinks() {
+    _appLinks = AppLinks();
+    // Note: Some versions of app_links require only listening to the stream;
+    // initial deep link will also be delivered through the stream depending on platform.
+
+    // Handle incoming links when app is already running
+    _appLinks.uriLinkStream.listen((uri) {
+      debugPrint('🔗 Received deep link: $uri');
+      _handleDeepLink(uri);
+    });
+  }
+
+  void _handleDeepLink(Uri uri) {
+    debugPrint('🔍 Processing deep link: ${uri.toString()}');
+
+    // Handle Supabase auth callback
+    if (uri.path.contains('/auth/callback')) {
+      debugPrint('📧 Email verification callback detected');
+
+      // Extract tokens: Supabase places them usually in the fragment but fall back to query params
+      final Map<String, String> params = {};
+      if (uri.fragment.isNotEmpty) {
+        params.addAll(Uri.splitQueryString(uri.fragment));
+      }
+      if (uri.queryParameters.isNotEmpty) {
+        params.addAll(uri.queryParameters);
+      }
+
+      final accessToken = params['access_token'];
+      final refreshToken = params['refresh_token'];
+      final type = params['type']; // e.g. signup/email_verification/recovery
+      debugPrint(
+          '🎫 Token type: $type, has access: ${accessToken != null}, has refresh: ${refreshToken != null}');
+
+      if (accessToken != null && refreshToken != null) {
+        _handleEmailVerification(accessToken, refreshToken);
+      } else {
+        debugPrint('⚠️ Missing tokens in callback URL; cannot set session.');
+      }
+    }
+  }
+
+  void _handleEmailVerification(String accessToken, String refreshToken) async {
+    try {
+      debugPrint('✉️ Processing email verification...');
+
+      // Set the session with the tokens
+      await Supabase.instance.client.auth.setSession(refreshToken);
+
+      debugPrint('✅ Email verification successful');
+
+      // Show success message and navigate to LOGIN screen (not main app)
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(
+                    child: Text(
+                        'Email verified successfully! You can now sign in.')),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 4),
+          ),
+        );
+
+        // Navigate to login screen
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => LandingPage()),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Email verification failed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Email verification failed. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

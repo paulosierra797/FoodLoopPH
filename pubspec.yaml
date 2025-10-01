@@ -35,6 +35,9 @@ dependencies:
 
   # Image picker
   image_picker: ^1.0.7
+  
+  # Deep links
+  app_links: ^6.3.2
 
   # Cupertino icons
   cupertino_icons: ^1.0.8
