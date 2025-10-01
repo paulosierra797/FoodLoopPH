@@ -1,9 +1,7 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'main_navigation_screen.dart';
 import 'login_screen.dart';
 import 'dart:async';
 
@@ -305,6 +303,16 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
 
       final user = authResponse.user;
       if (user == null) throw Exception('Sign up failed.');
+
+      // Insert user details into the Supabase users table
+      await supabase.from('users').insert({
+        'id': user.id,
+        'first_name': _firstNameController.text.trim(),
+        'last_name': _lastNameController.text.trim(),
+        'username': _usernameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'phone_number': _phoneController.text.trim(),
+      });
 
       // Do NOT insert into users table here. Wait for email verification and login.
       ScaffoldMessenger.of(context).showSnackBar(

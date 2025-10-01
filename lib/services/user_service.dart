@@ -94,17 +94,43 @@ class UserService extends ChangeNotifier {
     required String phoneNumber,
     required String password,
   }) async {
-    _currentUser = app_model.User(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      firstName: firstName,
-      lastName: lastName,
-      username: username,
-      email: email,
-      phoneNumber: phoneNumber,
-    );
+    final supabase = Supabase.instance.client;
 
-    await _saveUserToStorage();
-    notifyListeners();
+    try {
+      final response = await supabase.auth.signUp(
+        email: email,
+        password: password,
+      );
+
+      if (response.user != null) {
+        final userId = response.user!.id;
+
+        // Insert user details into the Supabase users table
+        await supabase.from('users').insert({
+          'id': userId,
+          'first_name': firstName,
+          'last_name': lastName,
+          'username': username,
+          'email': email,
+          'phone_number': phoneNumber,
+        });
+
+        _currentUser = app_model.User(
+          id: userId,
+          firstName: firstName,
+          lastName: lastName,
+          username: username,
+          email: email,
+          phoneNumber: phoneNumber,
+        );
+
+        await _saveUserToStorage();
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error during sign-up: $e');
+      rethrow;
+    }
   }
 
   // Login user (for demo purposes, we'll just load from storage)
