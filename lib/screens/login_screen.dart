@@ -164,7 +164,8 @@ class _LoginScreenState extends State<LoginScreen>
               .eq('id', response.user!.id)
               .single();
           isAdmin = userResponse['role'] == 'admin';
-          debugPrint('🔍 User role: ${userResponse['role']}, isAdmin: $isAdmin');
+          debugPrint(
+              '🔍 User role: ${userResponse['role']}, isAdmin: $isAdmin');
         } catch (e) {
           debugPrint('⚠️ Failed to fetch user role: $e');
         }
