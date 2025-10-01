@@ -155,9 +155,19 @@ class _LoginScreenState extends State<LoginScreen>
           debugPrint('⚠️ Failed to sync user from Supabase: $e');
         }
 
-        // Check if the user is an admin
-        final userMetadata = response.user?.userMetadata;
-        final isAdmin = userMetadata != null && userMetadata['role'] == 'admin';
+        // Check if the user is an admin by querying the database
+        bool isAdmin = false;
+        try {
+          final userResponse = await supabase
+              .from('users')
+              .select('role')
+              .eq('id', response.user!.id)
+              .single();
+          isAdmin = userResponse['role'] == 'admin';
+          debugPrint('🔍 User role: ${userResponse['role']}, isAdmin: $isAdmin');
+        } catch (e) {
+          debugPrint('⚠️ Failed to fetch user role: $e');
+        }
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
