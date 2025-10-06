@@ -19,8 +19,14 @@ returns table (
     listing_id uuid,
     food_name text,
     food_description text,
-  status text,
-  created_at timestamp
+    status text,
+    created_at timestamp,
+    category text,
+    location text,
+    quantity integer,
+    images text[],
+    contact_number text,
+    is_urgent boolean
 )
 language plpgsql
 security invoker
@@ -55,8 +61,14 @@ begin
     || ' f.id AS listing_id,'
     || ' f.title AS food_name,'
     || ' f.description AS food_description,'
-  || ' f.status,'
-  || ' f.created_at'
+    || ' f.status,'
+    || ' f.created_at,'
+    || ' f.category,'
+    || ' f.location,'
+    || ' f.quantity,'
+    || ' f.images,'
+    || ' f.contact_number,'
+    || ' f.is_urgent'
     || ' FROM public.users u'
     || ' JOIN public.food_listings f ON f.posted_by = u.id'
     || ' WHERE 1=1';
@@ -99,8 +111,14 @@ returns table (
     listing_id uuid,
     food_name text,
     food_description text,
-  status text,
-  created_at timestamp
+    status text,
+    created_at timestamp,
+    category text,
+    location text,
+    quantity integer,
+    images text[],
+    contact_number text,
+    is_urgent boolean
 )
 language plpgsql
 security invoker
@@ -140,8 +158,14 @@ begin
     || ' f.id AS listing_id,'
     || ' f.title AS food_name,'
     || ' f.description AS food_description,'
-  || ' f.status,'
-  || ' f.created_at'
+    || ' f.status,'
+    || ' f.created_at,'
+    || ' f.category,'
+    || ' f.location,'
+    || ' f.quantity,'
+    || ' f.images,'
+    || ' f.contact_number,'
+    || ' f.is_urgent'
     || ' FROM public.users u'
     || ' JOIN public.food_listings f ON f.posted_by = u.id'
     || ' WHERE f.posted_by = ' || quote_literal(_uid::text);

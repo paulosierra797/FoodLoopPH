@@ -80,10 +80,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     int? posts;
     try {
       // Attempt simple counts. Adjust table/column names as needed.
-      final pendingRows = await supabase
-          .from('listings')
-          .select('id')
-          .eq('status', 'pending');
+    // NOTE: Original code queried a non-existent 'listings' table causing 404.
+    // The actual table elsewhere in the codebase is 'food_listings'.
+    final pendingRows = await supabase
+      .from('food_listings')
+      .select('id')
+      .eq('status', 'pending');
       pending = (pendingRows as List).length;
     } catch (_) {
       pending = null;
@@ -248,7 +250,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       crossAxisCount: 2,
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 12,
-                      childAspectRatio: 1.9,
+                      // Slightly decrease aspect ratio to give a bit more vertical space
+                      // preventing minor 2-3px overflow in dense text scenarios.
+                      childAspectRatio: 1.6,
                     ),
                     children: [
                       _KpiCard(
