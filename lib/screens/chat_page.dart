@@ -1,63 +1,98 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ChatPage extends StatefulWidget {
-  const ChatPage({super.key});
+  final String otherUserId;
+  final String otherUserName;
+  final String? listingId;
+  final String? listingTitle;
+
+  const ChatPage({
+    super.key,
+    required this.otherUserId,
+    required this.otherUserName,
+    this.listingId,
+    this.listingTitle,
+  });
 
   @override
   _ChatPageState createState() => _ChatPageState();
 }
 
 class _ChatPageState extends State<ChatPage> {
+  final _supabase = Supabase.instance.client;
   final TextEditingController _messageController = TextEditingController();
-  final List<ChatMessage> _messages = [
-    ChatMessage(
-      id: '1',
-      senderId: 'other',
-      senderName: 'John Doe',
-      message: 'Hi! Is the pizza still available?',
-      timestamp: DateTime.now().subtract(Duration(minutes: 30)),
-      avatar: 'https://i.imgur.com/3ZQ3Z5F.png',
-      isRead: true,
-    ),
-    ChatMessage(
-      id: '2',
-      senderId: 'me',
-      senderName: 'You',
-      message: 'Yes, it\'s still available! Would you like to claim it?',
-      timestamp: DateTime.now().subtract(Duration(minutes: 25)),
-      avatar: '',
-      isRead: true,
-    ),
-    ChatMessage(
-      id: '3',
-      senderId: 'other',
-      senderName: 'John Doe',
-      message: 'Great! What time can I pick it up?',
-      timestamp: DateTime.now().subtract(Duration(minutes: 20)),
-      avatar: 'https://i.imgur.com/3ZQ3Z5F.png',
-      isRead: true,
-    ),
-    ChatMessage(
-      id: '4',
-      senderId: 'me',
-      senderName: 'You',
-      message:
-          'You can pick it up anytime between 2-6 PM today. I\'ll be at the location mentioned in the post.',
-      timestamp: DateTime.now().subtract(Duration(minutes: 15)),
-      avatar: '',
-      isRead: true,
-    ),
-    ChatMessage(
-      id: '5',
-      senderId: 'other',
-      senderName: 'John Doe',
-      message: 'Perfect! I\'ll be there around 3 PM. Thank you so much! 🙏',
-      timestamp: DateTime.now().subtract(Duration(minutes: 10)),
-      avatar: 'https://i.imgur.com/3ZQ3Z5F.png',
-      isRead: false,
-    ),
-  ];
+  List<Map<String, dynamic>> _messages = [];
+  bool _isLoading = true;
+  bool _isSending = false;
+  @override
+  void initState() {
+    super.initState();
+    _loadMessages();
+    _setupRealtimeSubscription();
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadMessages() async {
+    try {
+      setState(() => _isLoading = true);
+      
+      final currentUserId = _supabase.auth.currentUser?.id;
+      if (currentUserId == null) return;
+
+      final response = await _supabase.rpc('get_conversation_messages', params: {
+        'user_id': currentUserId,
+        'other_user_id': widget.otherUserId,
+        'listing_id_param': widget.listingId,
+        'limit_count': 50,
+        'offset_count': 0,
+      });
+
+      if (mounted) {
+        setState(() {
+          _messages = List<Map<String, dynamic>>.from(response ?? []);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading messages: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _setupRealtimeSubscription() {
+    final currentUserId = _supabase.auth.currentUser?.id;
+    if (currentUserId == null) return;
+
+    // Simplified realtime subscription without complex filters
+    _supabase
+        .channel('chat_messages')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'chat_messages',
+          callback: (payload) {
+            // Check if this message is relevant to current conversation
+            final newMessage = payload.newRecord;
+            final senderId = newMessage['sender_id'];
+            final receiverId = newMessage['receiver_id'];
+            
+            if ((senderId == currentUserId && receiverId == widget.otherUserId) ||
+                (senderId == widget.otherUserId && receiverId == currentUserId)) {
+              _loadMessages(); // Reload messages when new message arrives
+            }
+          },
+        )
+        .subscribe();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,29 +109,42 @@ class _ChatPageState extends State<ChatPage> {
           children: [
             CircleAvatar(
               radius: 20,
-              backgroundImage: NetworkImage('https://i.imgur.com/3ZQ3Z5F.png'),
-              backgroundColor: Colors.grey[300],
+              backgroundColor: Colors.amber[100],
+              child: Text(
+                widget.otherUserName.isNotEmpty 
+                    ? widget.otherUserName[0].toUpperCase() 
+                    : 'U',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.amber[800],
+                ),
+              ),
             ),
             SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'John Doe',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.otherUserName,
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                Text(
-                  'Online',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.green[600],
-                  ),
-                ),
-              ],
+                  if (widget.listingTitle != null)
+                    Text(
+                      'About: ${widget.listingTitle}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.amber[700],
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
+              ),
             ),
           ],
         ),
@@ -112,13 +160,19 @@ class _ChatPageState extends State<ChatPage> {
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.all(16),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                return _buildMessage(_messages[index]);
-              },
-            ),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _messages.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        padding: EdgeInsets.all(16),
+                        reverse: true,  // Show newest messages at bottom
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) {
+                          final reversedIndex = _messages.length - 1 - index;
+                          return _buildMessage(_messages[reversedIndex]);
+                        },
+                      ),
           ),
           _buildMessageInput(),
         ],
@@ -126,8 +180,47 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget _buildMessage(ChatMessage message) {
-    bool isMe = message.senderId == 'me';
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.chat_bubble_outline,
+            size: 80,
+            color: Colors.grey[400],
+          ),
+          SizedBox(height: 16),
+          Text(
+            'No messages yet',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey[600],
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Start the conversation!',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.grey[500],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessage(Map<String, dynamic> message) {
+    final currentUserId = _supabase.auth.currentUser?.id;
+    bool isMe = message['sender_id'] == currentUserId;
+    
+    final messageText = message['message_text']?.toString() ?? '';
+    final senderName = message['sender_name']?.toString() ?? 'Unknown';
+    final timestamp = message['timestamp'] != null 
+        ? DateTime.parse(message['timestamp']) 
+        : DateTime.now();
 
     return Container(
       margin: EdgeInsets.only(bottom: 16),
@@ -139,13 +232,15 @@ class _ChatPageState extends State<ChatPage> {
           if (!isMe) ...[
             CircleAvatar(
               radius: 16,
-              backgroundImage: message.avatar.isNotEmpty
-                  ? NetworkImage(message.avatar)
-                  : null,
-              backgroundColor: Colors.grey[300],
-              child: message.avatar.isEmpty
-                  ? Icon(Icons.person, size: 18, color: Colors.grey[600])
-                  : null,
+              backgroundColor: Colors.amber[100],
+              child: Text(
+                senderName.isNotEmpty ? senderName[0].toUpperCase() : 'U',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.amber[800],
+                  fontSize: 12,
+                ),
+              ),
             ),
             SizedBox(width: 8),
           ],
@@ -176,7 +271,7 @@ class _ChatPageState extends State<ChatPage> {
                 children: [
                   if (!isMe)
                     Text(
-                      message.senderName,
+                      senderName,
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -185,7 +280,7 @@ class _ChatPageState extends State<ChatPage> {
                     ),
                   if (!isMe) SizedBox(height: 4),
                   Text(
-                    message.message,
+                    messageText,
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       color: isMe ? Colors.white : Colors.black87,
@@ -193,27 +288,12 @@ class _ChatPageState extends State<ChatPage> {
                     ),
                   ),
                   SizedBox(height: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _formatTime(message.timestamp),
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: isMe ? Colors.white70 : Colors.grey[500],
-                        ),
-                      ),
-                      if (isMe) ...[
-                        SizedBox(width: 4),
-                        Icon(
-                          message.isRead ? Icons.done_all : Icons.done,
-                          size: 14,
-                          color: message.isRead
-                              ? Colors.blue[300]
-                              : Colors.white70,
-                        ),
-                      ],
-                    ],
+                  Text(
+                    _formatTime(timestamp),
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: isMe ? Colors.white70 : Colors.grey[500],
+                    ),
                   ),
                 ],
               ),
@@ -247,12 +327,6 @@ class _ChatPageState extends State<ChatPage> {
       ),
       child: Row(
         children: [
-          IconButton(
-            icon: Icon(Icons.add, color: Colors.grey[600]),
-            onPressed: () {
-              _showAttachmentOptions(context);
-            },
-          ),
           Expanded(
             child: Container(
               decoration: BoxDecoration(
@@ -279,14 +353,21 @@ class _ChatPageState extends State<ChatPage> {
           SizedBox(width: 8),
           Container(
             decoration: BoxDecoration(
-              color: Colors.amber[600],
+              color: _isSending ? Colors.grey : Colors.amber[600],
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              icon: Icon(Icons.send, color: Colors.white, size: 20),
-              onPressed: () {
-                _sendMessage();
-              },
+              icon: _isSending 
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Icon(Icons.send, color: Colors.white, size: 20),
+              onPressed: _isSending ? null : _sendMessage,
             ),
           ),
         ],
@@ -294,22 +375,39 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  void _sendMessage() {
-    if (_messageController.text.trim().isNotEmpty) {
-      setState(() {
-        _messages.add(
-          ChatMessage(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            senderId: 'me',
-            senderName: 'You',
-            message: _messageController.text.trim(),
-            timestamp: DateTime.now(),
-            avatar: '',
-            isRead: false,
-          ),
-        );
+  Future<void> _sendMessage() async {
+    final messageText = _messageController.text.trim();
+    if (messageText.isEmpty || _isSending) return;
+
+    setState(() => _isSending = true);
+
+    try {
+      final currentUserId = _supabase.auth.currentUser?.id;
+      if (currentUserId == null) return;
+
+      debugPrint('Sending message with params: sender_id=$currentUserId, receiver_id=${widget.otherUserId}, message_text=$messageText, listing_id=${widget.listingId}');
+
+      await _supabase.rpc('send_message', params: {
+        'sender_id': currentUserId,
+        'receiver_id': widget.otherUserId,
+        'message_text': messageText,
+        'listing_id_param': widget.listingId,
       });
+
       _messageController.clear();
+      await _loadMessages(); // Reload messages to show the new one
+      
+    } catch (e) {
+      debugPrint('Error sending message: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send message')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSending = false);
+      }
     }
   }
 
@@ -356,118 +454,24 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  void _showAttachmentOptions(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildAttachmentOption(
-                  icon: Icons.camera_alt,
-                  label: 'Camera',
-                  color: Colors.blue,
-                  onTap: () => Navigator.pop(context),
-                ),
-                _buildAttachmentOption(
-                  icon: Icons.photo_library,
-                  label: 'Gallery',
-                  color: Colors.green,
-                  onTap: () => Navigator.pop(context),
-                ),
-                _buildAttachmentOption(
-                  icon: Icons.location_on,
-                  label: 'Location',
-                  color: Colors.red,
-                  onTap: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-            SizedBox(height: 30),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _buildAttachmentOption({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          SizedBox(height: 8),
-          Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              color: Colors.grey[700],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   String _formatTime(DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
 
-    if (difference.inMinutes < 60) {
+    if (difference.inMinutes < 1) {
+      return 'Just now';
+    } else if (difference.inMinutes < 60) {
       return '${difference.inMinutes}m ago';
     } else if (difference.inHours < 24) {
       return '${difference.inHours}h ago';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}d ago';
     } else {
       return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
     }
   }
 }
 
-class ChatMessage {
-  final String id;
-  final String senderId;
-  final String senderName;
-  final String message;
-  final DateTime timestamp;
-  final String avatar;
-  final bool isRead;
 
-  ChatMessage({
-    required this.id,
-    required this.senderId,
-    required this.senderName,
-    required this.message,
-    required this.timestamp,
-    required this.avatar,
-    required this.isRead,
-  });
-}

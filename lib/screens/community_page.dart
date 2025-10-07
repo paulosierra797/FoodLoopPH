@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Comment model
 class PostComment {
@@ -55,89 +56,88 @@ class CommunityPageNew extends StatefulWidget {
 }
 
 class _CommunityPageNewState extends State<CommunityPageNew> {
+  final SupabaseClient supabase = Supabase.instance.client;
   String selectedCategory = 'All';
+  List<CommunityPost> posts = [];
 
-  // Sample posts data with Facebook-style content
-  List<CommunityPost> posts = [
-    CommunityPost(
-      id: '1',
-      author: 'Carlos Santos',
-      authorAvatar: '�‍💼',
-      category: 'Zero Waste',
-      content:
-          'Creative ways to use vegetable scraps! 🌱\n\nI always end up with vegetable scraps and slightly wilted vegetables. Looking for creative recipes or preservation methods to reduce food waste!\n\n#ZeroWaste #FoodSafety #CommunityTips',
-      timestamp: DateTime.now().subtract(Duration(minutes: 30)),
-      reactions: {'👍': 15, '❤️': 8, '🌱': 12, '💡': 5},
-      comments: [
-        PostComment(
-          id: '1',
-          author: 'John Cruz',
-          authorAvatar: '👨‍💼',
-          content:
-              'Great question! I usually make vegetable broth with my scraps. Just save them in the freezer until you have enough!',
-          timestamp: DateTime.now().subtract(Duration(minutes: 20)),
-          reactions: {'👍': 3, '❤️': 1},
-        ),
-        PostComment(
-          id: '2',
-          author: 'Anna Lee',
-          authorAvatar: '👩‍🍳',
-          content:
-              'Try making veggie chips! Just dehydrate them in the oven at low temp. My kids love them!',
-          timestamp: DateTime.now().subtract(Duration(minutes: 15)),
-          reactions: {'👍': 2, '🔥': 1},
-        ),
-      ],
-    ),
-    CommunityPost(
-      id: '2',
-      author: 'John Cruz',
-      authorAvatar: '👨‍💼',
-      category: 'Food Safety',
-      content:
-          'Best practices for food sharing 🔒\n\nWhat are the most important food safety guidelines we should follow when donating or receiving food through community sharing? Let\'s discuss and keep our community safe! 🛡️',
-      imagePaths: [
-        'https://images.unsplash.com/photo-1556909114-3e5caf136de9?w=400'
-      ],
-      timestamp: DateTime.now().subtract(Duration(hours: 2)),
-      reactions: {'👍': 23, '🔒': 10, '❤️': 6},
-      comments: [
-        PostComment(
-          id: '3',
-          author: 'Dr. Santos',
-          authorAvatar: '👨‍⚕️',
-          content:
-              'Very important topic! Always check expiry dates, proper storage temperature, and avoid dairy/meat products unless you\'re 100% sure about the source.',
-          timestamp: DateTime.now().subtract(Duration(hours: 1)),
-          reactions: {'👍': 5, '💯': 2},
-        ),
-      ],
-    ),
-    CommunityPost(
-      id: '3',
-      author: 'Chef Miguel',
-      authorAvatar: '👨‍🍳',
-      category: 'Recipes',
-      content:
-          'Leftover rice transformed! 🍚✨\n\nTurned yesterday\'s plain rice into delicious fried rice with some leftover vegetables. Zero waste cooking at its finest! Who else loves transforming leftovers? Share your tips below! 👇',
-      imagePaths: [
-        'https://images.unsplash.com/photo-1563379091339-03246963d49a?w=400',
-        'https://images.unsplash.com/photo-1512003867696-6d5ce6835040?w=400'
-      ],
-      timestamp: DateTime.now().subtract(Duration(hours: 4)),
-      reactions: {'😍': 32, '🤤': 18, '👍': 25, '🔥': 12},
-      comments: [
-        PostComment(
-          id: '4',
-          author: 'Carlos Santos',
-          authorAvatar: '�‍💼',
-          content: 'Looks amazing! Recipe please? 😍 I have leftover rice too!',
-          timestamp: DateTime.now().subtract(Duration(hours: 3)),
-          reactions: {'👍': 8, '❤️': 3},
-        ),
-      ],
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _fetchPosts();
+  }
+
+  Future<void> _fetchPosts() async {
+    try {
+      final response = await supabase
+          .from('community_posts')
+          .select('*, comments(*)') // Fetch posts along with their comments
+          .order('timestamp', ascending: false);
+
+      setState(() {
+        posts = (response as List<dynamic>).map((data) {
+          return CommunityPost(
+            id: data['id'],
+            author: data['author'],
+            authorAvatar: data['author_avatar'],
+            category: data['category'],
+            content: data['content'],
+            imagePaths: (data['images'] as List<dynamic>?)?.cast<String>(),
+            timestamp: DateTime.parse(data['timestamp']),
+            reactions: Map<String, int>.from(data['reactions'] ?? {}),
+            comments: (data['comments'] as List<dynamic>).map((comment) {
+              return PostComment(
+                id: comment['id'],
+                author: comment['user_id'], // Replace with actual user name if available
+                authorAvatar: '👤', // Replace with actual avatar if available
+                content: comment['content'],
+                timestamp: DateTime.parse(comment['created_at']),
+                reactions: {}, // Add reactions if supported
+              );
+            }).toList(),
+          );
+        }).toList();
+      });
+    } catch (e) {
+      print('Error fetching posts: $e');
+    }
+  }
+
+  Future<void> _createPost(String content, String category, List<String> imagePaths) async {
+    try {
+      await supabase.from('community_posts').insert({
+        'author': 'You', // Replace with actual user data
+        'author_avatar': '👤',
+        'category': category,
+        'content': content,
+        'images': imagePaths,
+        'timestamp': DateTime.now().toIso8601String(),
+        'reactions': {},
+      });
+      _fetchPosts();
+    } catch (e) {
+      print('Error creating post: $e');
+    }
+  }
+
+  Future<void> _addComment(String postId, String content) async {
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null) {
+        print('Error: No authenticated user found.');
+        return;
+      }
+
+      await supabase.from('comments').insert({
+        'post_id': postId,
+        'user_id': user.id, // Use the authenticated user ID
+        'content': content,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      _fetchPosts(); // Refresh posts to include new comments
+    } catch (e) {
+      print('Error adding comment: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -725,7 +725,11 @@ class _CommunityPageNewState extends State<CommunityPageNew> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => CreatePostBottomSheet(),
+      builder: (context) => CreatePostBottomSheet(
+        onPostCreated: (content, category, imagePaths) {
+          _createPost(content, category, imagePaths);
+        },
+      ),
     );
   }
 
@@ -835,18 +839,7 @@ class _CommunityPageNewState extends State<CommunityPageNew> {
                   IconButton(
                     onPressed: () {
                       if (commentController.text.isNotEmpty) {
-                        setState(() {
-                          post.comments.add(PostComment(
-                            id: DateTime.now()
-                                .millisecondsSinceEpoch
-                                .toString(),
-                            author: 'You',
-                            authorAvatar: '👤',
-                            content: commentController.text,
-                            timestamp: DateTime.now(),
-                            reactions: {},
-                          ));
-                        });
+                        _addComment(post.id, commentController.text);
                         commentController.clear();
                         Navigator.pop(context);
                       }
@@ -869,7 +862,10 @@ class _CommunityPageNewState extends State<CommunityPageNew> {
 
 // Create Post Bottom Sheet
 class CreatePostBottomSheet extends StatefulWidget {
-  const CreatePostBottomSheet({super.key});
+  final Function(String content, String category, List<String> imagePaths)
+      onPostCreated;
+
+  const CreatePostBottomSheet({super.key, required this.onPostCreated});
 
   @override
   _CreatePostBottomSheetState createState() => _CreatePostBottomSheetState();
@@ -922,11 +918,13 @@ class _CreatePostBottomSheetState extends State<CreatePostBottomSheet> {
                     onPressed: () {
                       if (_contentController.text.isNotEmpty) {
                         // Handle post creation
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Post created successfully!')),
+                        widget.onPostCreated(
+                          _contentController.text,
+                          selectedCategory,
+                          selectedImages,
                         );
+                        Navigator.pop(context);
                       }
-                      Navigator.pop(context);
                     },
                     child: Text(
                       'Post',

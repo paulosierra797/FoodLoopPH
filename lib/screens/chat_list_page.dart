@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'chat_page.dart';
 
 class ChatListPage extends StatefulWidget {
   const ChatListPage({super.key});
@@ -9,6 +11,43 @@ class ChatListPage extends StatefulWidget {
 }
 
 class _ChatListPageState extends State<ChatListPage> {
+  final _supabase = Supabase.instance.client;
+  List<Map<String, dynamic>> _conversations = [];
+  bool _isLoading = true;
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConversations();
+  }
+
+  Future<void> _loadConversations() async {
+    try {
+      final currentUserId = _supabase.auth.currentUser?.id;
+      if (currentUserId == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // Get conversations with latest message and other participant info
+      final response = await _supabase.rpc('get_user_conversations', 
+        params: {'user_id': currentUserId});
+
+      if (mounted) {
+        setState(() {
+          _conversations = List<Map<String, dynamic>>.from(response ?? []);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading conversations: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -41,9 +80,7 @@ class _ChatListPageState extends State<ChatListPage> {
                 Spacer(),
                 IconButton(
                   icon: Icon(Icons.search, color: Colors.black),
-                  onPressed: () {
-                    // Implement search functionality
-                  },
+                  onPressed: _showSearchDialog,
                 ),
               ],
             ),
@@ -51,39 +88,242 @@ class _ChatListPageState extends State<ChatListPage> {
 
           // Content area
           Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.chat_bubble_outline,
-                    size: 80,
-                    color: Colors.grey[400],
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'No messages yet',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Start sharing food and connect with your community!',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: Colors.grey[500],
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _conversations.isEmpty
+                    ? _buildEmptyState()
+                    : _buildConversationsList(),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.chat_bubble_outline,
+            size: 80,
+            color: Colors.grey[400],
+          ),
+          SizedBox(height: 16),
+          Text(
+            'No messages yet',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey[600],
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Start sharing food and connect with your community!',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.grey[500],
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConversationsList() {
+    final filteredConversations = _searchQuery.isEmpty
+        ? _conversations
+        : _conversations.where((conv) {
+            final name = conv['other_user_name']?.toString().toLowerCase() ?? '';
+            final email = conv['other_user_email']?.toString().toLowerCase() ?? '';
+            final query = _searchQuery.toLowerCase();
+            return name.contains(query) || email.contains(query);
+          }).toList();
+
+    return RefreshIndicator(
+      onRefresh: _loadConversations,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        itemCount: filteredConversations.length,
+        itemBuilder: (context, index) {
+          final conversation = filteredConversations[index];
+          return _buildConversationTile(conversation);
+        },
+      ),
+    );
+  }
+
+  Widget _buildConversationTile(Map<String, dynamic> conversation) {
+    final otherUserName = conversation['other_user_name']?.toString() ?? 'Unknown User';
+
+    final lastMessage = conversation['last_message']?.toString() ?? '';
+    final lastMessageTime = conversation['last_message_time'] != null 
+        ? DateTime.parse(conversation['last_message_time'])
+        : DateTime.now();
+    final unreadCount = conversation['unread_count'] ?? 0;
+    final listingTitle = conversation['listing_title']?.toString();
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: CircleAvatar(
+          radius: 24,
+          backgroundColor: Colors.amber[100],
+          child: Text(
+            otherUserName.isNotEmpty ? otherUserName[0].toUpperCase() : 'U',
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w600,
+              color: Colors.amber[800],
+            ),
+          ),
+        ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                otherUserName,
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (unreadCount > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  unreadCount.toString(),
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (listingTitle != null) ...[
+              Text(
+                'About: $listingTitle',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  color: Colors.amber[700],
+                  fontWeight: FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+            ],
+            Text(
+              lastMessage.isEmpty ? 'No messages yet' : lastMessage,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: Colors.grey[600],
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+            ),
+          ],
+        ),
+        trailing: Text(
+          _formatTime(lastMessageTime),
+          style: GoogleFonts.poppins(
+            fontSize: 11,
+            color: Colors.grey[500],
+          ),
+        ),
+        onTap: () => _openChat(conversation),
+      ),
+    );
+  }
+
+  void _showSearchDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Search Conversations', style: GoogleFonts.poppins()),
+        content: TextField(
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Enter name or email...',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (value) {
+            setState(() {
+              _searchQuery = value;
+            });
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _searchQuery = '';
+              });
+              Navigator.pop(context);
+            },
+            child: Text('Clear'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openChat(Map<String, dynamic> conversation) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChatPage(
+          otherUserId: conversation['other_user_id'],
+          otherUserName: conversation['other_user_name'] ?? 'Unknown User',
+          listingId: conversation['listing_id'],
+          listingTitle: conversation['listing_title'],
+        ),
+      ),
+    ).then((_) => _loadConversations()); // Refresh when returning
+  }
+
+  String _formatTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inMinutes < 1) {
+      return 'Just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}d ago';
+    } else {
+      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+    }
   }
 }

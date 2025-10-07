@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ExplorePage extends StatefulWidget {
   const ExplorePage({super.key});
@@ -560,11 +561,14 @@ class _ExplorePageState extends State<ExplorePage> {
   }
 
   void _claimFood(Map<String, dynamic> listing) {
+    final itemName = (listing['title'] ?? listing['food'] ?? listing['description'] ?? 'this food').toString();
+    final sourceName = (listing['name'] ?? listing['poster_name'] ?? listing['username'] ?? '').toString();
+    final fromPhrase = sourceName.isNotEmpty ? ' from $sourceName' : '';
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text("Claim Food"),
-        content: Text("Are you sure you want to claim ${listing["food"]} from ${listing["name"]}?"),
+        content: Text("Are you sure you want to claim $itemName$fromPhrase?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -572,22 +576,51 @@ class _ExplorePageState extends State<ExplorePage> {
           ),
           ElevatedButton(
             onPressed: () {
-              setState(() {
-                listing["available"] = false;
-                listing["quantity"] = "Claimed";
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text("Food claimed successfully!"),
-                  backgroundColor: Colors.green,
-                ),
-              );
+              _confirmClaim(listing);
             },
             child: Text("Claim"),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _confirmClaim(Map<String, dynamic> listing) async {
+    Navigator.pop(context);
+    try {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sign in required to claim'), backgroundColor: Colors.red),
+        );
+        return;
+      }
+      final listingId = listing['id'];
+      if (listingId == null) {
+        setState(() {
+          listing['available'] = false;
+          listing['quantity'] = 'Claimed';
+        });
+      } else {
+        await supabase.from('food_claims').insert({
+          'food_listing_id': listingId,
+          'user_id': user.id,
+        });
+        try { await supabase.from('food_listings').update({'status': 'claimed'}).eq('id', listingId); } catch(_) {}
+        setState(() {
+          listing['available'] = false;
+          listing['quantity'] = 'Claimed';
+          listing['status'] = 'claimed';
+        });
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Food claimed successfully!'), backgroundColor: Colors.green),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Claim failed: $e'), backgroundColor: Colors.red),
+      );
+    }
   }
 }
