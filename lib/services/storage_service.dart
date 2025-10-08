@@ -10,7 +10,7 @@ class StorageService {
   StorageService._internal();
 
   final SupabaseClient _supabase = Supabase.instance.client;
-  
+
   // Bucket names
   static const String foodImagesBucket = 'food-images';
   static const String profileImagesBucket = 'profile-images';
@@ -21,12 +21,11 @@ class StorageService {
       // Test bucket access by trying to list files instead of creating buckets
       await _supabase.storage.from(foodImagesBucket).list();
       debugPrint('✅ $foodImagesBucket bucket is accessible');
-      
+
       await _supabase.storage.from(profileImagesBucket).list();
       debugPrint('✅ $profileImagesBucket bucket is accessible');
-      
+
       debugPrint('🎉 All storage buckets are ready for use!');
-      
     } catch (e) {
       debugPrint('⚠️ Storage bucket access test failed: $e');
       debugPrint('📝 Please ensure buckets exist in Supabase Dashboard:');
@@ -54,9 +53,9 @@ class StorageService {
       final bytes = await imageFile.readAsBytes();
 
       // Upload to Supabase Storage
-      await _supabase.storage
-          .from(foodImagesBucket)
-          .uploadBinary(filePath, bytes, 
+      await _supabase.storage.from(foodImagesBucket).uploadBinary(
+            filePath,
+            bytes,
             fileOptions: FileOptions(
               contentType: _getMimeType(extension),
               upsert: false,
@@ -64,13 +63,11 @@ class StorageService {
           );
 
       // Get public URL
-      final publicUrl = _supabase.storage
-          .from(foodImagesBucket)
-          .getPublicUrl(filePath);
+      final publicUrl =
+          _supabase.storage.from(foodImagesBucket).getPublicUrl(filePath);
 
       debugPrint('✅ Uploaded food image: $publicUrl');
       return publicUrl;
-
     } catch (e) {
       debugPrint('❌ Error uploading food image: $e');
       return null;
@@ -80,14 +77,14 @@ class StorageService {
   /// Upload multiple food images and return list of public URLs
   Future<List<String>> uploadFoodImages(List<File> imageFiles) async {
     final uploadedUrls = <String>[];
-    
+
     for (final imageFile in imageFiles) {
       final url = await uploadFoodImage(imageFile);
       if (url != null) {
         uploadedUrls.add(url);
       }
     }
-    
+
     return uploadedUrls;
   }
 
@@ -108,9 +105,9 @@ class StorageService {
       final bytes = await imageFile.readAsBytes();
 
       // Upload to Supabase Storage (upsert = true to replace existing)
-      await _supabase.storage
-          .from(profileImagesBucket)
-          .uploadBinary(filePath, bytes,
+      await _supabase.storage.from(profileImagesBucket).uploadBinary(
+            filePath,
+            bytes,
             fileOptions: FileOptions(
               contentType: _getMimeType(extension),
               upsert: true, // Replace if exists
@@ -118,13 +115,11 @@ class StorageService {
           );
 
       // Get public URL
-      final publicUrl = _supabase.storage
-          .from(profileImagesBucket)
-          .getPublicUrl(filePath);
+      final publicUrl =
+          _supabase.storage.from(profileImagesBucket).getPublicUrl(filePath);
 
       debugPrint('✅ Uploaded profile image: $publicUrl');
       return publicUrl;
-
     } catch (e) {
       debugPrint('❌ Error uploading profile image: $e');
       return null;
@@ -138,13 +133,10 @@ class StorageService {
       final filePath = _extractFilePathFromUrl(imageUrl, foodImagesBucket);
       if (filePath == null) return false;
 
-      await _supabase.storage
-          .from(foodImagesBucket)
-          .remove([filePath]);
+      await _supabase.storage.from(foodImagesBucket).remove([filePath]);
 
       debugPrint('✅ Deleted food image: $filePath');
       return true;
-
     } catch (e) {
       debugPrint('❌ Error deleting food image: $e');
       return false;
@@ -178,11 +170,11 @@ class StorageService {
     try {
       final uri = Uri.parse(url);
       final segments = uri.pathSegments;
-      
+
       // Find bucket name in path
       final bucketIndex = segments.indexOf(bucketName);
       if (bucketIndex == -1) return null;
-      
+
       // Get path after bucket name
       final pathSegments = segments.sublist(bucketIndex + 1);
       return pathSegments.join('/');
@@ -198,22 +190,23 @@ class StorageService {
   }
 
   /// Get optimized image URL with transform parameters
-  String getOptimizedImageUrl(String originalUrl, {
+  String getOptimizedImageUrl(
+    String originalUrl, {
     int? width,
     int? height,
     String quality = '80',
     String format = 'webp',
   }) {
     if (!isSupabaseStorageUrl(originalUrl)) return originalUrl;
-    
+
     final uri = Uri.parse(originalUrl);
     final queryParams = Map<String, String>.from(uri.queryParameters);
-    
+
     if (width != null) queryParams['width'] = width.toString();
     if (height != null) queryParams['height'] = height.toString();
     queryParams['quality'] = quality;
     queryParams['format'] = format;
-    
+
     return uri.replace(queryParameters: queryParams).toString();
   }
 }

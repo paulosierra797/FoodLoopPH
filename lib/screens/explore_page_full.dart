@@ -1,10 +1,8 @@
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/food_listings_provider.dart';
-
 
 class ExplorePage extends ConsumerStatefulWidget {
   const ExplorePage({super.key});
@@ -126,9 +124,12 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
               child: listingsAsync.when(
                 data: (listings) {
                   final filtered = listings.where((listing) {
-                    final name = (listing["name"] ?? '').toString().toLowerCase();
-                    final food = (listing["food"] ?? '').toString().toLowerCase();
-                    final category = (listing["category"] ?? 'Others').toString();
+                    final name =
+                        (listing["name"] ?? '').toString().toLowerCase();
+                    final food =
+                        (listing["food"] ?? '').toString().toLowerCase();
+                    final category =
+                        (listing["category"] ?? 'Others').toString();
                     final matchesSearch = _searchQuery.isEmpty ||
                         name.contains(_searchQuery.toLowerCase()) ||
                         food.contains(_searchQuery.toLowerCase());
@@ -330,18 +331,15 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: available
-                            ? Colors.green[100]
-                            : Colors.red[100],
+                        color: available ? Colors.green[100] : Colors.red[100],
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         available ? "Available" : "Claimed",
                         style: GoogleFonts.poppins(
                           fontSize: 12,
-                          color: available
-                              ? Colors.green[700]
-                              : Colors.red[700],
+                          color:
+                              available ? Colors.green[700] : Colors.red[700],
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -518,12 +516,11 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
   }
 
   // Helper method to build food image with fallbacks
-  Widget _buildFoodImage({
-    required List<dynamic>? images, 
-    required String category, 
-    double width = double.infinity, 
-    double height = 150
-  }) {
+  Widget _buildFoodImage(
+      {required List<dynamic>? images,
+      required String category,
+      double width = double.infinity,
+      double height = 150}) {
     // Try to get first image
     String? imageUrl;
     if (images != null && images.isNotEmpty) {
@@ -543,12 +540,14 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     );
   }
 
-  Widget _buildNetworkImageWithFallback(String imageUrl, String category, double width, double height) {
+  Widget _buildNetworkImageWithFallback(
+      String imageUrl, String category, double width, double height) {
     // Check if it's a valid URL
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
       // Use optimized URL for Supabase Storage
-      final optimizedUrl = _getOptimizedImageUrl(imageUrl, width: width.toInt(), height: height.toInt());
-      
+      final optimizedUrl = _getOptimizedImageUrl(imageUrl,
+          width: width.toInt(), height: height.toInt());
+
       return Image.network(
         optimizedUrl,
         width: width,
@@ -565,7 +564,8 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
               strokeWidth: 2,
               color: Colors.orange[600],
               value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      loadingProgress.expectedTotalBytes!
                   : null,
             ),
           );
@@ -580,7 +580,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
   Widget _buildCategoryIcon(String category) {
     IconData icon;
     Color color;
-    
+
     switch (category.toLowerCase()) {
       case 'prepared food':
         icon = Icons.restaurant;
@@ -623,8 +623,14 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
 
   void _claimFood(Map<String, dynamic> listing) {
     // Derive a readable item name and source (poster) safely to avoid nulls in UI
-    final itemName = (listing['title'] ?? listing['food'] ?? listing['description'] ?? 'this food').toString();
-    final sourceName = (listing['name'] ?? listing['poster_name'] ?? listing['username'] ?? '').toString();
+    final itemName = (listing['title'] ??
+            listing['food'] ??
+            listing['description'] ??
+            'this food')
+        .toString();
+    final sourceName =
+        (listing['name'] ?? listing['poster_name'] ?? listing['username'] ?? '')
+            .toString();
     final fromPhrase = sourceName.isNotEmpty ? ' from $sourceName' : '';
     showDialog(
       context: context,
@@ -654,7 +660,9 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       final user = supabase.auth.currentUser;
       if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('You must be signed in to claim food'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('You must be signed in to claim food'),
+              backgroundColor: Colors.red),
         );
         return;
       }
@@ -662,7 +670,9 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       final listingId = listing['id'];
       if (listingId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Listing id missing, cannot claim'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Listing id missing, cannot claim'),
+              backgroundColor: Colors.red),
         );
         return;
       }
@@ -682,7 +692,9 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
 
       // Attempt to update listing status in DB (ignore errors silently)
       try {
-        await supabase.from('food_listings').update({'status': 'claimed'}).eq('id', listingId);
+        await supabase
+            .from('food_listings')
+            .update({'status': 'claimed'}).eq('id', listingId);
       } catch (_) {}
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -693,7 +705,8 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Claim failed: $e'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('Claim failed: $e'), backgroundColor: Colors.red),
       );
     }
   }
@@ -704,12 +717,12 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       // This is a Supabase Storage URL, add optimization parameters
       final uri = Uri.parse(originalUrl);
       final queryParams = <String, String>{};
-      
+
       if (width != null) queryParams['width'] = width.toString();
       if (height != null) queryParams['height'] = height.toString();
       queryParams['quality'] = '80';
       queryParams['format'] = 'webp';
-      
+
       return uri.replace(queryParameters: queryParams).toString();
     }
     return originalUrl;

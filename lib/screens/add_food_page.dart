@@ -219,8 +219,8 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
                                     label: 'Best Before',
                                     items: _expiryOptions,
                                     icon: Icons.schedule,
-                                    onChanged: (value) =>
-                                        setState(() => _selectedExpiry = value!),
+                                    onChanged: (value) => setState(
+                                        () => _selectedExpiry = value!),
                                   ),
                                 ),
                               ],
@@ -351,7 +351,8 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
                                   height: 20,
                                   width: 20,
                                   child: CircularProgressIndicator(
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
                                     strokeWidth: 2,
                                   ),
                                 )
@@ -374,7 +375,8 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
 
                       SizedBox(height: 32),
                       // Extra bottom padding for better scrolling
-                      SizedBox(height: MediaQuery.of(context).padding.bottom + 20),
+                      SizedBox(
+                          height: MediaQuery.of(context).padding.bottom + 20),
                     ],
                   ),
                 ),
@@ -398,7 +400,8 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
                 color: Colors.orange[100],
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.camera_alt, color: Colors.orange[700], size: 20),
+              child:
+                  Icon(Icons.camera_alt, color: Colors.orange[700], size: 20),
             ),
             SizedBox(width: 12),
             Text(
@@ -420,7 +423,7 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
           ),
         ),
         SizedBox(height: 16),
-        
+
         // Image Grid
         if (_selectedImages.isNotEmpty) ...[
           SizedBox(
@@ -444,8 +447,8 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.add_photo_alternate, 
-                               color: Colors.grey[600], size: 32),
+                          Icon(Icons.add_photo_alternate,
+                              color: Colors.grey[600], size: 32),
                           SizedBox(height: 4),
                           Text(
                             'Add More',
@@ -459,7 +462,7 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
                     ),
                   );
                 }
-                
+
                 // Display selected image
                 return Container(
                   width: 120,
@@ -758,15 +761,16 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
         debugPrint('🔄 Starting upload of ${_selectedImages.length} images...');
         imageUrls = await StorageService().uploadFoodImages(_selectedImages);
         debugPrint('✅ Upload completed. Got ${imageUrls.length} URLs');
-        
+
         // Clear the upload progress snackbar
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        
+
         if (imageUrls.length != _selectedImages.length) {
           // Some uploads failed
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Some images failed to upload. Continuing with ${imageUrls.length} images.'),
+              content: Text(
+                  'Some images failed to upload. Continuing with ${imageUrls.length} images.'),
               backgroundColor: Colors.orange,
             ),
           );
@@ -865,7 +869,7 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
           );
         },
       );
-      
+
       setState(() {
         _isSubmitting = false;
       });
@@ -959,7 +963,7 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
       maxHeight: 800,
       imageQuality: 80,
     );
-    
+
     if (image != null && _selectedImages.length < 5) {
       setState(() {
         _selectedImages.add(File(image.path));
@@ -973,7 +977,7 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
       maxHeight: 800,
       imageQuality: 80,
     );
-    
+
     if (images.isNotEmpty) {
       setState(() {
         for (var image in images) {
@@ -982,10 +986,12 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
           }
         }
       });
-      
+
       if (images.length > 5 - (_selectedImages.length - images.length)) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Only first ${5 - (_selectedImages.length - images.length)} images were added. Maximum 5 images allowed.')),
+          SnackBar(
+              content: Text(
+                  'Only first ${5 - (_selectedImages.length - images.length)} images were added. Maximum 5 images allowed.')),
         );
       }
     }
