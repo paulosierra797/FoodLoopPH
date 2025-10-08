@@ -72,7 +72,7 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
   // Get user display name from cache or fetch from database
   Future<String> _getUserDisplayName(String userId) async {
     debugPrint('🔍 Getting display name for user ID: $userId');
-    
+
     if (userCache.containsKey(userId)) {
       debugPrint('✅ Found in cache: ${userCache[userId]}');
       return userCache[userId]!;
@@ -92,9 +92,10 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
         final firstName = response['first_name'] ?? '';
         final lastName = response['last_name'] ?? '';
         final username = response['username'] ?? '';
-        
-        debugPrint('👤 User data - First: $firstName, Last: $lastName, Username: $username');
-        
+
+        debugPrint(
+            '👤 User data - First: $firstName, Last: $lastName, Username: $username');
+
         String displayName;
         if (firstName.isNotEmpty || lastName.isNotEmpty) {
           displayName = '$firstName $lastName'.trim();
@@ -103,7 +104,7 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
         } else {
           displayName = 'Unknown User';
         }
-        
+
         debugPrint('✅ Final display name: $displayName');
         userCache[userId] = displayName;
         return displayName;
@@ -111,7 +112,7 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
     } catch (e) {
       debugPrint('❌ Error fetching user display name: $e');
     }
-    
+
     debugPrint('⚠️ Returning Unknown User for ID: $userId');
     userCache[userId] = 'Unknown User';
     return 'Unknown User';
@@ -128,18 +129,18 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
       final List<CommunityPost> fetchedPosts = [];
       for (var data in response as List<dynamic>) {
         debugPrint('📝 Processing post data: $data');
-        
+
         // Get author name for post - using user_id field from database
         String userId = data['user_id']?.toString() ?? '';
         debugPrint('👤 Post user_id: "$userId"');
-        
+
         String postAuthorName = 'Unknown User';
         if (userId.isNotEmpty) {
           postAuthorName = await _getUserDisplayName(userId);
         } else {
           debugPrint('⚠️ Empty user_id for post: ${data['id']}');
         }
-        
+
         // Process comments and get user names
         final List<PostComment> processedComments = [];
         for (var comment in data['comments'] as List<dynamic>) {
@@ -179,7 +180,8 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
     }
   }
 
-  Future<void> _createPost(String content, String category, List<String> imagePaths) async {
+  Future<void> _createPost(
+      String content, String category, List<String> imagePaths) async {
     try {
       final user = supabase.auth.currentUser;
       if (user == null) {
@@ -807,12 +809,12 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
   void _showCreatePostDialog() {
     final userService = ref.read(userServiceProvider);
     final currentUser = userService.currentUser;
-    final userDisplayName = currentUser != null 
-        ? '${currentUser.firstName} ${currentUser.lastName}'.trim().isEmpty 
+    final userDisplayName = currentUser != null
+        ? '${currentUser.firstName} ${currentUser.lastName}'.trim().isEmpty
             ? currentUser.username
             : '${currentUser.firstName} ${currentUser.lastName}'.trim()
         : 'User';
-        
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -959,7 +961,8 @@ class CreatePostBottomSheet extends StatefulWidget {
       onPostCreated;
   final String userName;
 
-  const CreatePostBottomSheet({super.key, required this.onPostCreated, required this.userName});
+  const CreatePostBottomSheet(
+      {super.key, required this.onPostCreated, required this.userName});
 
   @override
   _CreatePostBottomSheetState createState() => _CreatePostBottomSheetState();

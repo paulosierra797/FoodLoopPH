@@ -23,7 +23,8 @@ class MainNavigationScreen extends ConsumerStatefulWidget {
   const MainNavigationScreen({super.key});
 
   @override
-  ConsumerState<MainNavigationScreen> createState() => _MainNavigationScreenState();
+  ConsumerState<MainNavigationScreen> createState() =>
+      _MainNavigationScreenState();
 }
 
 class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
@@ -51,8 +52,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-  final userService = ref.watch(userServiceProvider);
-  return Scaffold(
+    final userService = ref.watch(userServiceProvider);
+    return Scaffold(
       // Consistent AppBar with notification bell and hamburger menu on the right
       appBar: AppBar(
         backgroundColor: Colors.orange[600],
@@ -139,7 +140,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                               return fullName.isNotEmpty
                                   ? fullName
                                       .split(' ')
-                                      .map((name) => name.isNotEmpty ? name[0] : '')
+                                      .map((name) =>
+                                          name.isNotEmpty ? name[0] : '')
                                       .take(2)
                                       .join('')
                                   : "JD";
@@ -155,7 +157,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                         Column(
                           children: [
                             Text(
-                              userService.currentUser?.fullName ?? "Juan Dela Cruz",
+                              userService.currentUser?.fullName ??
+                                  "Juan Dela Cruz",
                               style: GoogleFonts.poppins(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -165,7 +168,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                             ),
                             SizedBox(height: 4),
                             Text(
-                              userService.currentUser?.email ?? "juan.delacruz@example.com",
+                              userService.currentUser?.email ??
+                                  "juan.delacruz@example.com",
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 color: Colors.white70,
@@ -328,8 +332,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     mainAxisSize: MainAxisSize.max,
                     children: [
-                      _buildNavItemWithLabel(3, Icons.people_outline,
-                          Icons.people, "Community"),
+                      _buildNavItemWithLabel(
+                          3, Icons.people_outline, Icons.people, "Community"),
                       _buildNavItemWithLabel(
                           4, Icons.mail_outline, Icons.mail, "Messages"),
                     ],
