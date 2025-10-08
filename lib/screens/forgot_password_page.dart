@@ -182,104 +182,101 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                               SizedBox(height: 40),
 
                               // Form
-                                Form(
-                                  key: _formKey,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(16),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.05),
-                                          blurRadius: 10,
-                                          offset: Offset(0, 5),
-                                        ),
-                                      ],
-                                    ),
-                                    child: TextFormField(
-                                      controller: _emailController,
-                                      keyboardType: TextInputType.emailAddress,
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 16,
-                                        color: Colors.grey[800],
+                              Form(
+                                key: _formKey,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 10,
+                                        offset: Offset(0, 5),
                                       ),
-                                      decoration: InputDecoration(
-                                        labelText: "Email Address",
-                                        labelStyle: GoogleFonts.poppins(
-                                          color: Colors.grey[500],
-                                          fontSize: 14,
-                                        ),
-                                        prefixIcon: Icon(
-                                          Icons.email_outlined,
-                                          color: Colors.amber[600],
-                                        ),
-                                        border: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(16),
-                                          borderSide: BorderSide.none,
-                                        ),
-                                        filled: true,
-                                        fillColor: Colors.white,
-                                        contentPadding: EdgeInsets.symmetric(
-                                          horizontal: 20,
-                                          vertical: 20,
-                                        ),
-                                      ),
-                                      validator: (value) {
-                                        if (value == null || value.isEmpty) {
-                                          return 'Please enter your email';
-                                        }
-                                        if (!RegExp(
-                                                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                                            .hasMatch(value)) {
-                                          return 'Please enter a valid email';
-                                        }
-                                        return null;
-                                      },
+                                    ],
+                                  ),
+                                  child: TextFormField(
+                                    controller: _emailController,
+                                    keyboardType: TextInputType.emailAddress,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 16,
+                                      color: Colors.grey[800],
                                     ),
+                                    decoration: InputDecoration(
+                                      labelText: "Email Address",
+                                      labelStyle: GoogleFonts.poppins(
+                                        color: Colors.grey[500],
+                                        fontSize: 14,
+                                      ),
+                                      prefixIcon: Icon(
+                                        Icons.email_outlined,
+                                        color: Colors.amber[600],
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 20,
+                                      ),
+                                    ),
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Please enter your email';
+                                      }
+                                      if (!RegExp(
+                                              r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                                          .hasMatch(value)) {
+                                        return 'Please enter a valid email';
+                                      }
+                                      return null;
+                                    },
                                   ),
                                 ),
+                              ),
 
-                                SizedBox(height: 40),
+                              SizedBox(height: 40),
 
-                                // Submit Button
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 56,
-                                  child: ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.amber[600],
-                                      foregroundColor: Colors.white,
-                                      elevation: 8,
-                                      shadowColor:
-                                          Colors.amber.withOpacity(0.4),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
+                              // Submit Button
+                              SizedBox(
+                                width: double.infinity,
+                                height: 56,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.amber[600],
+                                    foregroundColor: Colors.white,
+                                    elevation: 8,
+                                    shadowColor: Colors.amber.withOpacity(0.4),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
                                     ),
-                                    onPressed:
-                                        _isLoading ? null : _handleSubmit,
-                                    child: _isLoading
-                                        ? SizedBox(
-                                            height: 20,
-                                            width: 20,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              valueColor:
-                                                  AlwaysStoppedAnimation<Color>(
-                                                Colors.white,
-                                              ),
-                                            ),
-                                          )
-                                        : Text(
-                                            "Send Verification Code",
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w600,
+                                  ),
+                                  onPressed: _isLoading ? null : _handleSubmit,
+                                  child: _isLoading
+                                      ? SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                              Colors.white,
                                             ),
                                           ),
-                                  ),
+                                        )
+                                      : Text(
+                                          "Send Verification Code",
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
                                 ),
+                              ),
 
                               Spacer(),
 
