@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/user_service_provider.dart';
 
 // Comment model
 class PostComment {
@@ -48,22 +50,71 @@ class CommunityPost {
   });
 }
 
-class CommunityPageNew extends StatefulWidget {
+class CommunityPageNew extends ConsumerStatefulWidget {
   const CommunityPageNew({super.key});
 
   @override
-  _CommunityPageNewState createState() => _CommunityPageNewState();
+  ConsumerState<CommunityPageNew> createState() => _CommunityPageNewState();
 }
 
-class _CommunityPageNewState extends State<CommunityPageNew> {
+class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
   final SupabaseClient supabase = Supabase.instance.client;
   String selectedCategory = 'All';
   List<CommunityPost> posts = [];
+  Map<String, String> userCache = {}; // Cache for user ID to name mapping
 
   @override
   void initState() {
     super.initState();
     _fetchPosts();
+  }
+
+  // Get user display name from cache or fetch from database
+  Future<String> _getUserDisplayName(String userId) async {
+    debugPrint('🔍 Getting display name for user ID: $userId');
+    
+    if (userCache.containsKey(userId)) {
+      debugPrint('✅ Found in cache: ${userCache[userId]}');
+      return userCache[userId]!;
+    }
+
+    try {
+      debugPrint('📡 Fetching from database...');
+      final response = await supabase
+          .from('users')
+          .select('first_name, last_name, username')
+          .eq('id', userId)
+          .maybeSingle();
+
+      debugPrint('📋 Database response: $response');
+
+      if (response != null) {
+        final firstName = response['first_name'] ?? '';
+        final lastName = response['last_name'] ?? '';
+        final username = response['username'] ?? '';
+        
+        debugPrint('👤 User data - First: $firstName, Last: $lastName, Username: $username');
+        
+        String displayName;
+        if (firstName.isNotEmpty || lastName.isNotEmpty) {
+          displayName = '$firstName $lastName'.trim();
+        } else if (username.isNotEmpty) {
+          displayName = username;
+        } else {
+          displayName = 'Unknown User';
+        }
+        
+        debugPrint('✅ Final display name: $displayName');
+        userCache[userId] = displayName;
+        return displayName;
+      }
+    } catch (e) {
+      debugPrint('❌ Error fetching user display name: $e');
+    }
+    
+    debugPrint('⚠️ Returning Unknown User for ID: $userId');
+    userCache[userId] = 'Unknown User';
+    return 'Unknown User';
   }
 
   Future<void> _fetchPosts() async {
@@ -73,29 +124,55 @@ class _CommunityPageNewState extends State<CommunityPageNew> {
           .select('*, comments(*)') // Fetch posts along with their comments
           .order('timestamp', ascending: false);
 
+      // Process posts and fetch user names
+      final List<CommunityPost> fetchedPosts = [];
+      for (var data in response as List<dynamic>) {
+        debugPrint('📝 Processing post data: $data');
+        
+        // Get author name for post - using user_id field from database
+        String userId = data['user_id']?.toString() ?? '';
+        debugPrint('👤 Post user_id: "$userId"');
+        
+        String postAuthorName = 'Unknown User';
+        if (userId.isNotEmpty) {
+          postAuthorName = await _getUserDisplayName(userId);
+        } else {
+          debugPrint('⚠️ Empty user_id for post: ${data['id']}');
+        }
+        
+        // Process comments and get user names
+        final List<PostComment> processedComments = [];
+        for (var comment in data['comments'] as List<dynamic>) {
+          String commentUserId = comment['user_id']?.toString() ?? '';
+          String commentAuthorName = 'Unknown User';
+          if (commentUserId.isNotEmpty) {
+            commentAuthorName = await _getUserDisplayName(commentUserId);
+          }
+          processedComments.add(PostComment(
+            id: comment['id'],
+            author: commentAuthorName,
+            authorAvatar: '👤',
+            content: comment['content'],
+            timestamp: DateTime.parse(comment['created_at']),
+            reactions: {},
+          ));
+        }
+
+        fetchedPosts.add(CommunityPost(
+          id: data['id'],
+          author: postAuthorName,
+          authorAvatar: data['author_avatar'] ?? '👤',
+          category: data['category'],
+          content: data['content'],
+          imagePaths: (data['images'] as List<dynamic>?)?.cast<String>(),
+          timestamp: DateTime.parse(data['timestamp']),
+          reactions: Map<String, int>.from(data['reactions'] ?? {}),
+          comments: processedComments,
+        ));
+      }
+
       setState(() {
-        posts = (response as List<dynamic>).map((data) {
-          return CommunityPost(
-            id: data['id'],
-            author: data['author'],
-            authorAvatar: data['author_avatar'],
-            category: data['category'],
-            content: data['content'],
-            imagePaths: (data['images'] as List<dynamic>?)?.cast<String>(),
-            timestamp: DateTime.parse(data['timestamp']),
-            reactions: Map<String, int>.from(data['reactions'] ?? {}),
-            comments: (data['comments'] as List<dynamic>).map((comment) {
-              return PostComment(
-                id: comment['id'],
-                author: comment['user_id'], // Replace with actual user name if available
-                authorAvatar: '👤', // Replace with actual avatar if available
-                content: comment['content'],
-                timestamp: DateTime.parse(comment['created_at']),
-                reactions: {}, // Add reactions if supported
-              );
-            }).toList(),
-          );
-        }).toList();
+        posts = fetchedPosts;
       });
     } catch (e) {
       print('Error fetching posts: $e');
@@ -104,8 +181,15 @@ class _CommunityPageNewState extends State<CommunityPageNew> {
 
   Future<void> _createPost(String content, String category, List<String> imagePaths) async {
     try {
+      final user = supabase.auth.currentUser;
+      if (user == null) {
+        print('Error: No authenticated user found.');
+        return;
+      }
+
       await supabase.from('community_posts').insert({
-        'author': 'You', // Replace with actual user data
+        'user_id': user.id, // Use user_id to match database schema
+        'author': await _getUserDisplayName(user.id), // Get actual user name
         'author_avatar': '👤',
         'category': category,
         'content': content,
@@ -721,11 +805,20 @@ class _CommunityPageNewState extends State<CommunityPageNew> {
   }
 
   void _showCreatePostDialog() {
+    final userService = ref.read(userServiceProvider);
+    final currentUser = userService.currentUser;
+    final userDisplayName = currentUser != null 
+        ? '${currentUser.firstName} ${currentUser.lastName}'.trim().isEmpty 
+            ? currentUser.username
+            : '${currentUser.firstName} ${currentUser.lastName}'.trim()
+        : 'User';
+        
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => CreatePostBottomSheet(
+        userName: userDisplayName,
         onPostCreated: (content, category, imagePaths) {
           _createPost(content, category, imagePaths);
         },
@@ -864,8 +957,9 @@ class _CommunityPageNewState extends State<CommunityPageNew> {
 class CreatePostBottomSheet extends StatefulWidget {
   final Function(String content, String category, List<String> imagePaths)
       onPostCreated;
+  final String userName;
 
-  const CreatePostBottomSheet({super.key, required this.onPostCreated});
+  const CreatePostBottomSheet({super.key, required this.onPostCreated, required this.userName});
 
   @override
   _CreatePostBottomSheetState createState() => _CreatePostBottomSheetState();
@@ -955,7 +1049,7 @@ class _CreatePostBottomSheetState extends State<CreatePostBottomSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'You',
+                        widget.userName,
                         style: GoogleFonts.poppins(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,

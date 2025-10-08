@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'otp_verification_screen.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -52,6 +53,21 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
     _animationController.dispose();
     _emailController.dispose();
     super.dispose();
+  }
+
+  Future<bool> _checkUserExists(String email) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final response = await supabase
+          .from('users')
+          .select('email')
+          .eq('email', email)
+          .maybeSingle();
+      return response != null;
+    } catch (e) {
+      // If there's an error, assume user might exist and proceed
+      return true;
+    }
   }
 
   @override
@@ -157,7 +173,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                                 ),
                                 SizedBox(height: 16),
                                 Text(
-                                  "Don't worry! It happens. Please enter the email address linked with your account.",
+                                  "Don't worry! It happens. Please enter the email address linked with your account. We'll send you a 6-digit verification code to reset your password.",
                                   style: GoogleFonts.poppins(
                                     fontSize: 16,
                                     color: Colors.grey[600],
@@ -166,7 +182,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                                 ),
                               ] else ...[
                                 Text(
-                                  "Check your\nemail!",
+                                  "Code sent\nsuccessfully!",
                                   style: GoogleFonts.poppins(
                                     fontSize: 32,
                                     fontWeight: FontWeight.bold,
@@ -176,7 +192,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                                 ),
                                 SizedBox(height: 16),
                                 Text(
-                                  "We have sent a password recovery link to your email address.",
+                                  "We have sent a 6-digit verification code to your email address. Please check your inbox.",
                                   style: GoogleFonts.poppins(
                                     fontSize: 16,
                                     color: Colors.grey[600],
@@ -279,7 +295,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                                             ),
                                           )
                                         : Text(
-                                            "Send Reset Link",
+                                            "Send Verification Code",
                                             style: GoogleFonts.poppins(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
@@ -415,23 +431,48 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
       final supabase = Supabase.instance.client;
       final email = _emailController.text.trim();
       try {
-        await supabase.auth.resetPasswordForEmail(email);
+        // First check if user exists
+        final userExists = await _checkUserExists(email);
+        if (!userExists) {
+          throw Exception('No account found with this email address');
+        }
+
+        // Send OTP for password reset using the configured template
+        await supabase.auth.resetPasswordForEmail(
+          email,
+          redirectTo: null, // No redirect URL needed for OTP flow
+        );
+
         setState(() {
           _isLoading = false;
           _emailSent = true;
         });
         _animationController.reset();
         _animationController.forward();
+
+        // Navigate to OTP verification screen after successful email send
+        Future.delayed(Duration(seconds: 2), () {
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => OTPVerificationScreen(email: email),
+              ),
+            );
+          }
+        });
       } catch (e) {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to send reset email: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to send OTP: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }

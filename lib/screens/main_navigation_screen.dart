@@ -304,17 +304,37 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildNavItemWithLabel(
-                    0, Icons.home_outlined, Icons.home, "Home"),
-                _buildNavItemWithLabel(
-                    1, Icons.search_outlined, Icons.search, "Explore"),
+                // Left group (leans left)
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      _buildNavItemWithLabel(
+                          0, Icons.home_outlined, Icons.home, "Home"),
+                      _buildNavItemWithLabel(
+                          1, Icons.search_outlined, Icons.search, "Explore"),
+                    ],
+                  ),
+                ),
+
+                // Center add/share button (fixed center)
                 _buildAddButton(),
-                _buildNavItemWithLabel(
-                    3, Icons.people_outline, Icons.people, "Community"),
-                _buildNavItemWithLabel(
-                    4, Icons.mail_outline, Icons.mail, "Messages"),
+
+                // Right group (leans right)
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      _buildNavItemWithLabel(3, Icons.people_outline,
+                          Icons.people, "Community"),
+                      _buildNavItemWithLabel(
+                          4, Icons.mail_outline, Icons.mail, "Messages"),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),

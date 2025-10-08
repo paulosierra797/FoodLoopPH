@@ -315,6 +315,25 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
         'phone_number': _phoneController.text.trim(),
       });
 
+      // Create user profile in users table immediately after Auth user creation
+      debugPrint('✅ Auth user created: ${user.id}');
+      debugPrint('📝 Creating user profile in users table...');
+
+      try {
+        await supabase.from('users').insert({
+          'id': user.id,
+          'email': email,
+          'first_name': _firstNameController.text.trim(),
+          'last_name': _lastNameController.text.trim(),
+          'username': _usernameController.text.trim(),
+          'phone_number': _phoneController.text.trim(),
+          'role': 'user',
+        });
+        debugPrint('✅ User profile created in users table');
+      } catch (e) {
+        debugPrint('⚠️ Failed to create user profile: $e');
+        // Don't fail the signup if profile creation fails
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
