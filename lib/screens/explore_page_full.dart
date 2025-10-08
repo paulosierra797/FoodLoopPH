@@ -578,23 +578,33 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
         return;
       }
 
-      // Insert claim record
-      await supabase.from('food_claims').insert({
-        'food_listing_id': listingId,
-        'user_id': user.id,
+      // Use the new claim_food_item function
+      final result = await supabase.rpc('claim_food_item', params: {
+        'food_id': listingId,
+        'claimer_id': user.id,
       });
 
-      // Update listing status locally (optimistic UI)
-      setState(() {
-        listing['status'] = 'claimed';
-        listing['available'] = false;
-        listing['quantity'] = 'Claimed';
-      });
+      if (result == true) {
+        // Also insert into food_claims table for backwards compatibility
+        try {
+          await supabase.from('food_claims').insert({
+            'food_listing_id': listingId,
+            'user_id': user.id,
+          });
+        } catch (e) {
+          // Ignore if already exists
+          debugPrint('Food claim already exists: $e');
+        }
 
-      // Attempt to update listing status in DB (ignore errors silently)
-      try {
-        await supabase.from('food_listings').update({'status': 'claimed'}).eq('id', listingId);
-      } catch (_) {}
+        // Update listing status locally (optimistic UI)
+        setState(() {
+          listing['status'] = 'claimed';
+          listing['available'] = false;
+          listing['quantity'] = 'Claimed';
+        });
+      } else {
+        throw Exception('Unable to claim this food item');
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

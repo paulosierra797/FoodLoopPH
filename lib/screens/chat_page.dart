@@ -35,6 +35,8 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   void dispose() {
+    // Notify ChatListPage to refresh conversations when returning
+    Navigator.pop(context, true);
     _messageController.dispose();
     super.dispose();
   }
@@ -166,11 +168,9 @@ class _ChatPageState extends State<ChatPage> {
                     ? _buildEmptyState()
                     : ListView.builder(
                         padding: EdgeInsets.all(16),
-                        reverse: true,  // Show newest messages at bottom
                         itemCount: _messages.length,
                         itemBuilder: (context, index) {
-                          final reversedIndex = _messages.length - 1 - index;
-                          return _buildMessage(_messages[reversedIndex]);
+                          return _buildMessage(_messages[index]);
                         },
                       ),
           ),

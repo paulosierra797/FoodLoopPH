@@ -146,16 +146,49 @@ class _ClaimedFoodCard extends StatelessWidget {
             ],
           ],
         ),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.green[100],
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            'Claimed',
-            style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.green[700]),
-          ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.green[100],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                'Claimed',
+                style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.green[700]),
+              ),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange[600],
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () {
+                final posterId = data['poster_id']?.toString();
+                final posterName = data['poster_name']?.toString() ?? 'User';
+                if (posterId != null && posterId.isNotEmpty) {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ChatPage(
+                        otherUserId: posterId,
+                        otherUserName: posterName,
+                        listingId: data['food_listing_id']?.toString(),
+                        listingTitle: data['title']?.toString(),
+                      ),
+                    ),
+                  );
+                }
+              },
+              child: Text(
+                'Message',
+                style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+              ),
+            ),
+          ],
         ),
         onTap: () => _showClaimedOptions(context, data),
       ),

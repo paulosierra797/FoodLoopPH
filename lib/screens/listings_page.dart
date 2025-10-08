@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/food_listings_provider.dart';
+import 'chat_page.dart';
 
 class ListingsPage extends ConsumerWidget {
   const ListingsPage({super.key});
@@ -218,6 +219,104 @@ class ListingsPage extends ConsumerWidget {
                       ),
                     ),
                     Spacer(),
+                    // Add message button for claimed items
+                    if (status.toLowerCase() == 'claimed') ...[
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange[600],
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          minimumSize: const Size(60, 28),
+                        ),
+                        onPressed: () async {
+                          debugPrint('Item data for claimed food: $item');
+                          
+                          // First try to use claimed_by field directly from the item
+                          final claimedById = item['claimed_by']?.toString();
+                          if (claimedById != null && claimedById.isNotEmpty) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ChatPage(
+                                  otherUserId: claimedById,
+                                  otherUserName: 'User', // We'll get the name from the chat
+                                  listingId: item['id']?.toString(),
+                                  listingTitle: item['title']?.toString(),
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+                          
+                          // Fallback: Try to get claimer info from the database
+                          try {
+                            final claimerInfo = await _getClaimerInfo(item['id']);
+                            if (claimerInfo != null) {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => ChatPage(
+                                    otherUserId: claimerInfo['claimer_id'] ?? '',
+                                    otherUserName: claimerInfo['claimer_name'] ?? 'User',
+                                    listingId: item['id']?.toString(),
+                                    listingTitle: item['title']?.toString(),
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+                          } catch (e) {
+                            debugPrint('Error fetching claimer info: $e');
+                          }
+                          
+                          final claimerId = item['claimer_id']?.toString();
+                          final claimerName = item['claimer_name']?.toString() ?? 'User';
+                          debugPrint('Claimer ID: $claimerId, Claimer Name: $claimerName');
+                          if (claimerId != null && claimerId.isNotEmpty) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ChatPage(
+                                  otherUserId: claimerId,
+                                  otherUserName: claimerName,
+                                  listingId: item['id']?.toString(),
+                                  listingTitle: item['title']?.toString(),
+                                ),
+                              ),
+                            );
+                          } else {
+                            // Show dialog to manually find the claimer or provide alternative
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: Text('Contact Claimer'),
+                                content: Text('The claimer information is not available in the database yet. You can check your Messages tab to see if they\'ve contacted you, or wait for them to message you first.'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: Text('OK'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      // Navigate to messages tab (assuming it's index 4 in main navigation)
+                                      Navigator.of(context).pushNamedAndRemoveUntil(
+                                        '/',
+                                        (route) => false,
+                                        arguments: 4, // Messages tab index
+                                      );
+                                    },
+                                    child: Text('Go to Messages'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                        },
+                        child: Text(
+                          'Message',
+                          style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                     _buildActionButtons(item, context, ref),
                   ],
                 ),
@@ -368,6 +467,53 @@ class ListingsPage extends ConsumerWidget {
   String _safeString(dynamic value) {
     if (value == null) return '';
     return value.toString();
+  }
+
+  Future<Map<String, String>?> _getClaimerInfo(dynamic listingId) async {
+    try {
+      final supabase = Supabase.instance.client;
+      
+      // Try to use the same RPC function that gets claimed foods, but in reverse
+      // to find who claimed a specific listing
+      final response = await supabase.rpc('get_listing_claimer', params: {
+        'listing_id': listingId,
+      });
+      
+      if (response != null && response.isNotEmpty) {
+        final claimerData = response[0];
+        return {
+          'claimer_id': claimerData['claimer_id']?.toString() ?? '',
+          'claimer_name': claimerData['claimer_name']?.toString() ?? 'User',
+        };
+      }
+    } catch (e) {
+      debugPrint('Error in _getClaimerInfo: $e');
+      
+      // Fallback: Try direct query to food_claims or similar table
+      try {
+        final supabase = Supabase.instance.client;
+        final response = await supabase
+            .from('food_claims')
+            .select('claimer_id, users!food_claims_claimer_id_fkey(first_name, last_name)')
+            .eq('food_listing_id', listingId)
+            .eq('status', 'approved')
+            .maybeSingle();
+        
+        if (response != null) {
+          final userInfo = response['users'];
+          return {
+            'claimer_id': response['claimer_id']?.toString() ?? '',
+            'claimer_name': userInfo != null 
+                ? '${userInfo['first_name'] ?? ''} ${userInfo['last_name'] ?? ''}'.trim()
+                : 'User',
+          };
+        }
+      } catch (e2) {
+        debugPrint('Fallback query also failed: $e2');
+      }
+    }
+    
+    return null;
   }
 
   Color _getStatusColor(String status) {
