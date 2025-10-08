@@ -16,7 +16,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
   final TextEditingController _emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
-  bool _emailSent = false;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -161,50 +160,28 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                               SizedBox(height: 40),
 
                               // Title
-                              if (!_emailSent) ...[
-                                Text(
-                                  "Forgot your\npassword?",
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey[800],
-                                    height: 1.2,
-                                  ),
+                              Text(
+                                "Forgot your\npassword?",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey[800],
+                                  height: 1.2,
                                 ),
-                                SizedBox(height: 16),
-                                Text(
-                                  "Don't worry! It happens. Please enter the email address linked with your account. We'll send you a 6-digit verification code to reset your password.",
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    color: Colors.grey[600],
-                                    height: 1.5,
-                                  ),
+                              ),
+                              SizedBox(height: 16),
+                              Text(
+                                "Don't worry! It happens. Please enter the email address linked with your account. We'll send you a 6-digit verification code.",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  color: Colors.grey[600],
+                                  height: 1.5,
                                 ),
-                              ] else ...[
-                                Text(
-                                  "Code sent\nsuccessfully!",
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green[700],
-                                    height: 1.2,
-                                  ),
-                                ),
-                                SizedBox(height: 16),
-                                Text(
-                                  "We have sent a 6-digit verification code to your email address. Please check your inbox.",
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    color: Colors.grey[600],
-                                    height: 1.5,
-                                  ),
-                                ),
-                              ],
+                              ),
 
                               SizedBox(height: 40),
 
                               // Form
-                              if (!_emailSent) ...[
                                 Form(
                                   key: _formKey,
                                   child: Container(
@@ -303,80 +280,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                                           ),
                                   ),
                                 ),
-                              ] else ...[
-                                // Success actions
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 56,
-                                  child: ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.green[600],
-                                      foregroundColor: Colors.white,
-                                      elevation: 8,
-                                      shadowColor:
-                                          Colors.green.withOpacity(0.4),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                    ),
-                                    onPressed: () {
-                                      // Open email app
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text("Opening email app..."),
-                                          backgroundColor: Colors.green[600],
-                                        ),
-                                      );
-                                    },
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.email, size: 20),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          "Open Email App",
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-
-                                SizedBox(height: 16),
-
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 56,
-                                  child: OutlinedButton(
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.amber[600],
-                                      side:
-                                          BorderSide(color: Colors.amber[600]!),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                    ),
-                                    onPressed: () {
-                                      setState(() {
-                                        _emailSent = false;
-                                        _emailController.clear();
-                                      });
-                                    },
-                                    child: Text(
-                                      "Try Another Email",
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
 
                               Spacer(),
 
@@ -443,24 +346,30 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
           redirectTo: null, // No redirect URL needed for OTP flow
         );
 
-        setState(() {
-          _isLoading = false;
-          _emailSent = true;
-        });
-        _animationController.reset();
-        _animationController.forward();
-
-        // Navigate to OTP verification screen after successful email send
-        Future.delayed(Duration(seconds: 2), () {
-          if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => OTPVerificationScreen(email: email),
+        // Show brief success message and navigate directly to OTP
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text('Verification code sent to your email'),
+                ],
               ),
-            );
-          }
-        });
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+
+          // Navigate directly to OTP verification screen
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OTPVerificationScreen(email: email),
+            ),
+          );
+        }
       } catch (e) {
         setState(() {
           _isLoading = false;
