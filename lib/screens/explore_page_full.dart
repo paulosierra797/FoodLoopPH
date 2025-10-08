@@ -534,7 +534,8 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
         height: height,
         color: Colors.grey[200],
         child: imageUrl != null && imageUrl.isNotEmpty
-            ? _buildNetworkImageWithFallback(imageUrl, category, width ?? 300.0, height)
+            ? _buildNetworkImageWithFallback(
+                imageUrl, category, width ?? 300.0, height)
             : _buildCategoryIcon(category),
       ),
     );
@@ -547,10 +548,10 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       // Validate width and height to prevent Infinity/NaN errors
       final safeWidth = (width.isFinite && width > 0) ? width.toInt() : 300;
       final safeHeight = (height.isFinite && height > 0) ? height.toInt() : 200;
-      
+
       // Use optimized URL for Supabase Storage
-      final optimizedUrl = _getOptimizedImageUrl(imageUrl,
-          width: safeWidth, height: safeHeight);
+      final optimizedUrl =
+          _getOptimizedImageUrl(imageUrl, width: safeWidth, height: safeHeight);
 
       return Image.network(
         optimizedUrl,
@@ -699,12 +700,12 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
           debugPrint('Food claim already exists: $e');
         }
 
-      // Attempt to update listing status in DB (ignore errors silently)
-      try {
-        await supabase
-            .from('food_listings')
-            .update({'status': 'claimed'}).eq('id', listingId);
-      } catch (_) {}
+        // Attempt to update listing status in DB (ignore errors silently)
+        try {
+          await supabase
+              .from('food_listings')
+              .update({'status': 'claimed'}).eq('id', listingId);
+        } catch (_) {}
       } else {
         throw Exception('Unable to claim this food item');
       }
