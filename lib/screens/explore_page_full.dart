@@ -1,10 +1,8 @@
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/food_listings_provider.dart';
-
 
 class ExplorePage extends ConsumerStatefulWidget {
   const ExplorePage({super.key});
@@ -126,9 +124,12 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
               child: listingsAsync.when(
                 data: (listings) {
                   final filtered = listings.where((listing) {
-                    final name = (listing["name"] ?? '').toString().toLowerCase();
-                    final food = (listing["food"] ?? '').toString().toLowerCase();
-                    final category = (listing["category"] ?? 'Others').toString();
+                    final name =
+                        (listing["name"] ?? '').toString().toLowerCase();
+                    final food =
+                        (listing["food"] ?? '').toString().toLowerCase();
+                    final category =
+                        (listing["category"] ?? 'Others').toString();
                     final matchesSearch = _searchQuery.isEmpty ||
                         name.contains(_searchQuery.toLowerCase()) ||
                         food.contains(_searchQuery.toLowerCase());
@@ -274,10 +275,8 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
 
   Widget _buildFoodCard(Map<String, dynamic> listing) {
     String name = (listing["title"] ?? "Unnamed").toString();
-    // images is likely a list or null, so handle accordingly
-    String img = (listing["images"] != null && listing["images"] is List && (listing["images"] as List).isNotEmpty)
-        ? (listing["images"][0] ?? "https://via.placeholder.com/400x150?text=No+Image").toString()
-        : "https://via.placeholder.com/400x150?text=No+Image";
+    String category = (listing["category"] ?? "Other").toString();
+    List<dynamic>? images = listing["images"] as List<dynamic>?;
     String food = (listing["description"] ?? "Unknown food").toString();
     String quantity = (listing["quantity"] ?? "N/A").toString();
     String address = (listing["location"] ?? "No address").toString();
@@ -305,23 +304,10 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Image
-          ClipRRect(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-            child: Image.network(
-              img,
-              height: 150,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  height: 150,
-                  color: Colors.grey[200],
-                  child: Center(
-                    child: Icon(Icons.image, color: Colors.grey[400], size: 40),
-                  ),
-                );
-              },
-            ),
+          _buildFoodImage(
+            images: images,
+            category: category,
+            height: 150,
           ),
 
           Padding(
@@ -345,18 +331,15 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: available
-                            ? Colors.green[100]
-                            : Colors.red[100],
+                        color: available ? Colors.green[100] : Colors.red[100],
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         available ? "Available" : "Claimed",
                         style: GoogleFonts.poppins(
                           fontSize: 12,
-                          color: available
-                              ? Colors.green[700]
-                              : Colors.red[700],
+                          color:
+                              available ? Colors.green[700] : Colors.red[700],
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -532,10 +515,122 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     );
   }
 
+  // Helper method to build food image with fallbacks
+  Widget _buildFoodImage(
+      {required List<dynamic>? images,
+      required String category,
+      double width = double.infinity,
+      double height = 150}) {
+    // Try to get first image
+    String? imageUrl;
+    if (images != null && images.isNotEmpty) {
+      imageUrl = images[0]?.toString();
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      child: Container(
+        width: width,
+        height: height,
+        color: Colors.grey[200],
+        child: imageUrl != null && imageUrl.isNotEmpty
+            ? _buildNetworkImageWithFallback(imageUrl, category, width, height)
+            : _buildCategoryIcon(category),
+      ),
+    );
+  }
+
+  Widget _buildNetworkImageWithFallback(
+      String imageUrl, String category, double width, double height) {
+    // Check if it's a valid URL
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      // Use optimized URL for Supabase Storage
+      final optimizedUrl = _getOptimizedImageUrl(imageUrl,
+          width: width.toInt(), height: height.toInt());
+
+      return Image.network(
+        optimizedUrl,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          debugPrint('Error loading image: $imageUrl - $error');
+          return _buildCategoryIcon(category);
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.orange[600],
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      loadingProgress.expectedTotalBytes!
+                  : null,
+            ),
+          );
+        },
+      );
+    } else {
+      // If it's not a valid URL (like our simulated filenames), show category icon
+      return _buildCategoryIcon(category);
+    }
+  }
+
+  Widget _buildCategoryIcon(String category) {
+    IconData icon;
+    Color color;
+
+    switch (category.toLowerCase()) {
+      case 'prepared food':
+        icon = Icons.restaurant;
+        color = Colors.orange[600]!;
+        break;
+      case 'fresh produce':
+        icon = Icons.eco;
+        color = Colors.green[600]!;
+        break;
+      case 'packaged food':
+        icon = Icons.inventory;
+        color = Colors.blue[600]!;
+        break;
+      case 'baked goods':
+        icon = Icons.bakery_dining;
+        color = Colors.brown[600]!;
+        break;
+      case 'beverages':
+        icon = Icons.local_drink;
+        color = Colors.purple[600]!;
+        break;
+      default:
+        icon = Icons.food_bank;
+        color = Colors.grey[600]!;
+    }
+
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color.withOpacity(0.1), color.withOpacity(0.2)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Icon(icon, color: color, size: 48),
+    );
+  }
+
   void _claimFood(Map<String, dynamic> listing) {
     // Derive a readable item name and source (poster) safely to avoid nulls in UI
-    final itemName = (listing['title'] ?? listing['food'] ?? listing['description'] ?? 'this food').toString();
-    final sourceName = (listing['name'] ?? listing['poster_name'] ?? listing['username'] ?? '').toString();
+    final itemName = (listing['title'] ??
+            listing['food'] ??
+            listing['description'] ??
+            'this food')
+        .toString();
+    final sourceName =
+        (listing['name'] ?? listing['poster_name'] ?? listing['username'] ?? '')
+            .toString();
     final fromPhrase = sourceName.isNotEmpty ? ' from $sourceName' : '';
     showDialog(
       context: context,
@@ -565,7 +660,9 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       final user = supabase.auth.currentUser;
       if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('You must be signed in to claim food'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('You must be signed in to claim food'),
+              backgroundColor: Colors.red),
         );
         return;
       }
@@ -573,7 +670,9 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       final listingId = listing['id'];
       if (listingId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Listing id missing, cannot claim'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Listing id missing, cannot claim'),
+              backgroundColor: Colors.red),
         );
         return;
       }
@@ -596,12 +695,12 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
           debugPrint('Food claim already exists: $e');
         }
 
-        // Update listing status locally (optimistic UI)
-        setState(() {
-          listing['status'] = 'claimed';
-          listing['available'] = false;
-          listing['quantity'] = 'Claimed';
-        });
+      // Attempt to update listing status in DB (ignore errors silently)
+      try {
+        await supabase
+            .from('food_listings')
+            .update({'status': 'claimed'}).eq('id', listingId);
+      } catch (_) {}
       } else {
         throw Exception('Unable to claim this food item');
       }
@@ -614,8 +713,26 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Claim failed: $e'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('Claim failed: $e'), backgroundColor: Colors.red),
       );
     }
+  }
+
+  // Helper method to get optimized image URL for Supabase Storage
+  String _getOptimizedImageUrl(String originalUrl, {int? width, int? height}) {
+    if (originalUrl.contains('/storage/v1/object/public/')) {
+      // This is a Supabase Storage URL, add optimization parameters
+      final uri = Uri.parse(originalUrl);
+      final queryParams = <String, String>{};
+
+      if (width != null) queryParams['width'] = width.toString();
+      if (height != null) queryParams['height'] = height.toString();
+      queryParams['quality'] = '80';
+      queryParams['format'] = 'webp';
+
+      return uri.replace(queryParameters: queryParams).toString();
+    }
+    return originalUrl;
   }
 }
