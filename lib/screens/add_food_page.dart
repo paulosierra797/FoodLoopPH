@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../providers/food_listings_provider.dart';
+import '../services/storage_service.dart';
 import 'main_navigation_screen.dart';
 
 class AddFoodPage extends ConsumerStatefulWidget {
@@ -25,6 +28,8 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
   String _selectedExpiry = 'Today';
   bool _isUrgent = false;
   bool _isSubmitting = false;
+  List<File> _selectedImages = [];
+  final ImagePicker _picker = ImagePicker();
 
   final List<String> _categories = [
     'Prepared Food',
@@ -97,7 +102,8 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
             // Main Content
             Expanded(
               child: SingleChildScrollView(
-                padding: EdgeInsets.all(16),
+                physics: BouncingScrollPhysics(),
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -168,29 +174,59 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
 
                       SizedBox(height: 16),
 
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              controller: _quantityController,
-                              label: 'Quantity',
-                              hint: 'e.g., 10 servings, 5 kg',
-                              icon: Icons.scale,
-                              required: true,
-                            ),
-                          ),
-                          SizedBox(width: 16),
-                          Expanded(
-                            child: _buildDropdownField(
-                              value: _selectedExpiry,
-                              label: 'Best Before',
-                              items: _expiryOptions,
-                              icon: Icons.schedule,
-                              onChanged: (value) =>
-                                  setState(() => _selectedExpiry = value!),
-                            ),
-                          ),
-                        ],
+                      // Use Column instead of Row on smaller screens
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          if (constraints.maxWidth < 400) {
+                            // Stacked layout for smaller screens
+                            return Column(
+                              children: [
+                                _buildTextField(
+                                  controller: _quantityController,
+                                  label: 'Quantity',
+                                  hint: 'e.g., 10 servings, 5 kg',
+                                  icon: Icons.scale,
+                                  required: true,
+                                ),
+                                SizedBox(height: 16),
+                                _buildDropdownField(
+                                  value: _selectedExpiry,
+                                  label: 'Best Before',
+                                  items: _expiryOptions,
+                                  icon: Icons.schedule,
+                                  onChanged: (value) =>
+                                      setState(() => _selectedExpiry = value!),
+                                ),
+                              ],
+                            );
+                          } else {
+                            // Side-by-side layout for larger screens
+                            return Row(
+                              children: [
+                                Expanded(
+                                  child: _buildTextField(
+                                    controller: _quantityController,
+                                    label: 'Quantity',
+                                    hint: 'e.g., 10 servings, 5 kg',
+                                    icon: Icons.scale,
+                                    required: true,
+                                  ),
+                                ),
+                                SizedBox(width: 16),
+                                Expanded(
+                                  child: _buildDropdownField(
+                                    value: _selectedExpiry,
+                                    label: 'Best Before',
+                                    items: _expiryOptions,
+                                    icon: Icons.schedule,
+                                    onChanged: (value) =>
+                                        setState(() => _selectedExpiry = value!),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }
+                        },
                       ),
 
                       SizedBox(height: 16),
@@ -202,6 +238,11 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
                         icon: Icons.description,
                         maxLines: 3,
                       ),
+
+                      SizedBox(height: 16),
+
+                      // Image Upload Section
+                      _buildImageUploadSection(),
 
                       SizedBox(height: 24),
 
@@ -331,7 +372,9 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
                         ),
                       ),
 
-                      SizedBox(height: 24),
+                      SizedBox(height: 32),
+                      // Extra bottom padding for better scrolling
+                      SizedBox(height: MediaQuery.of(context).padding.bottom + 20),
                     ],
                   ),
                 ),
@@ -340,6 +383,179 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildImageUploadSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.camera_alt, color: Colors.orange[700], size: 20),
+            ),
+            SizedBox(width: 12),
+            Text(
+              'Food Photos (Optional)',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[800],
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 12),
+        Text(
+          'Add photos to make your donation more appealing',
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            color: Colors.grey[600],
+          ),
+        ),
+        SizedBox(height: 16),
+        
+        // Image Grid
+        if (_selectedImages.isNotEmpty) ...[
+          SizedBox(
+            height: 120,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _selectedImages.length + 1, // +1 for add button
+              itemBuilder: (context, index) {
+                if (index == _selectedImages.length) {
+                  // Add more images button
+                  return Container(
+                    width: 120,
+                    margin: EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[300]!),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: InkWell(
+                      onTap: _pickImages,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_photo_alternate, 
+                               color: Colors.grey[600], size: 32),
+                          SizedBox(height: 4),
+                          Text(
+                            'Add More',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                
+                // Display selected image
+                return Container(
+                  width: 120,
+                  margin: EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.file(
+                          _selectedImages[index],
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: GestureDetector(
+                          onTap: () => _removeImage(index),
+                          child: Container(
+                            padding: EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            '${_selectedImages.length}/5 photos selected',
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: Colors.grey[600],
+            ),
+          ),
+        ] else ...[
+          // Initial upload area
+          GestureDetector(
+            onTap: _pickImages,
+            child: Container(
+              width: double.infinity,
+              height: 120,
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                border: Border.all(
+                  color: Colors.grey[300]!,
+                  style: BorderStyle.solid,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.add_photo_alternate,
+                    color: Colors.grey[600],
+                    size: 48,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Tap to add food photos',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  Text(
+                    'Up to 5 photos',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -515,6 +731,48 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
     }
 
     try {
+      // Upload images to Supabase Storage
+      List<String> imageUrls = [];
+      if (_selectedImages.isNotEmpty) {
+        // Show upload progress
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Text('Uploading ${_selectedImages.length} images...'),
+              ],
+            ),
+            duration: Duration(seconds: 10),
+          ),
+        );
+
+        debugPrint('🔄 Starting upload of ${_selectedImages.length} images...');
+        imageUrls = await StorageService().uploadFoodImages(_selectedImages);
+        debugPrint('✅ Upload completed. Got ${imageUrls.length} URLs');
+        
+        // Clear the upload progress snackbar
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        
+        if (imageUrls.length != _selectedImages.length) {
+          // Some uploads failed
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Some images failed to upload. Continuing with ${imageUrls.length} images.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+
       await supabase.from('food_listings').insert({
         'title': _foodNameController.text.trim(),
         'description': _descriptionController.text.trim(),
@@ -524,6 +782,9 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
         'posted_by': user.id,
         'status': 'available',
         'expiration_date': _mapExpiryToDate(_selectedExpiry),
+        'images': imageUrls,
+        'contact_number': _contactController.text.trim(),
+        'is_urgent': _isUrgent,
         'created_at': DateTime.now().toIso8601String(),
       });
       showDialog(
@@ -644,6 +905,98 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
     }
   }
 
+  // Image picker methods
+  Future<void> _pickImages() async {
+    if (_selectedImages.length >= 5) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Maximum 5 images allowed')),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.camera_alt),
+                title: Text('Take a photo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _getImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.photo_library),
+                title: Text('Choose from gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _getImage(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.photo_library_outlined),
+                title: Text('Select multiple'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _getMultipleImages();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _getImage(ImageSource source) async {
+    final XFile? image = await _picker.pickImage(
+      source: source,
+      maxWidth: 800,
+      maxHeight: 800,
+      imageQuality: 80,
+    );
+    
+    if (image != null && _selectedImages.length < 5) {
+      setState(() {
+        _selectedImages.add(File(image.path));
+      });
+    }
+  }
+
+  Future<void> _getMultipleImages() async {
+    final List<XFile> images = await _picker.pickMultiImage(
+      maxWidth: 800,
+      maxHeight: 800,
+      imageQuality: 80,
+    );
+    
+    if (images.isNotEmpty) {
+      setState(() {
+        for (var image in images) {
+          if (_selectedImages.length < 5) {
+            _selectedImages.add(File(image.path));
+          }
+        }
+      });
+      
+      if (images.length > 5 - (_selectedImages.length - images.length)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Only first ${5 - (_selectedImages.length - images.length)} images were added. Maximum 5 images allowed.')),
+        );
+      }
+    }
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      _selectedImages.removeAt(index);
+    });
+  }
+
   // Clear form after successful submission
   void _clearForm() {
     _foodNameController.clear();
@@ -656,6 +1009,7 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
       _selectedExpiry = 'Today';
       _isUrgent = false;
       _isSubmitting = false;
+      _selectedImages.clear();
     });
   }
 

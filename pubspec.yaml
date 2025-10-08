@@ -39,6 +39,9 @@ dependencies:
   # Image picker
   image_picker: ^1.0.7
   
+  # Path utilities
+  path: ^1.8.3
+  
   # Deep links
   app_links: ^6.3.2
 

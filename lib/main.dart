@@ -8,6 +8,7 @@ import 'screens/landing_page.dart';
 import 'screens/main_navigation_screen.dart';
 import 'services/user_service.dart';
 import 'services/notification_service.dart';
+import 'services/storage_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,9 +22,11 @@ void main() async {
   // Initialize services
   final userService = UserService();
   final notificationService = NotificationService();
+  final storageService = StorageService();
 
   await userService.initialize();
   await notificationService.initialize();
+  await storageService.initializeBuckets();
 
   // Check for existing Supabase session
   final session = Supabase.instance.client.auth.currentSession;
