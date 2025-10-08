@@ -519,7 +519,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
   Widget _buildFoodImage(
       {required List<dynamic>? images,
       required String category,
-      double width = double.infinity,
+      double? width,
       double height = 150}) {
     // Try to get first image
     String? imageUrl;
@@ -534,7 +534,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
         height: height,
         color: Colors.grey[200],
         child: imageUrl != null && imageUrl.isNotEmpty
-            ? _buildNetworkImageWithFallback(imageUrl, category, width, height)
+            ? _buildNetworkImageWithFallback(imageUrl, category, width ?? 300.0, height)
             : _buildCategoryIcon(category),
       ),
     );
@@ -544,9 +544,13 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       String imageUrl, String category, double width, double height) {
     // Check if it's a valid URL
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      // Validate width and height to prevent Infinity/NaN errors
+      final safeWidth = (width.isFinite && width > 0) ? width.toInt() : 300;
+      final safeHeight = (height.isFinite && height > 0) ? height.toInt() : 200;
+      
       // Use optimized URL for Supabase Storage
       final optimizedUrl = _getOptimizedImageUrl(imageUrl,
-          width: width.toInt(), height: height.toInt());
+          width: safeWidth, height: safeHeight);
 
       return Image.network(
         optimizedUrl,
