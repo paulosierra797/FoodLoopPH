@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/user_service_provider.dart';
+import '../providers/notifications_provider.dart';
+import '../services/database_notification_service.dart';
 import 'home_page.dart';
 import 'explore_page_full.dart';
 import 'add_food_page.dart';
@@ -16,7 +18,6 @@ import 'notification_settings_page.dart';
 import 'about_page.dart';
 import 'change_password_page.dart';
 import 'landing_page.dart';
-import '../services/user_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MainNavigationScreen extends ConsumerStatefulWidget {
@@ -71,30 +72,44 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                   _showNotificationDropdown(context);
                 },
               ),
-              // Notification badge
-              Positioned(
-                right: 8,
-                top: 8,
-                child: Container(
-                  padding: EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  constraints: BoxConstraints(
-                    minWidth: 16,
-                    minHeight: 16,
-                  ),
-                  child: Text(
-                    '3',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+              // Notification badge with real count
+              Consumer(
+                builder: (context, ref, child) {
+                  final unreadCountAsync = ref.watch(unreadNotificationsCountProvider);
+                  return unreadCountAsync.when(
+                    data: (count) {
+                      if (count > 0) {
+                        return Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            padding: EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            constraints: BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Text(
+                              count > 99 ? '99+' : count.toString(),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        );
+                      }
+                      return SizedBox.shrink();
+                    },
+                    loading: () => SizedBox.shrink(),
+                    error: (_, __) => SizedBox.shrink(),
+                  );
+                },
               ),
             ],
           ),
@@ -439,9 +454,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
         ),
       ),
       onTap: onTap,
-      horizontalTitleGap: 10,
     );
-  }
+  } // Added missing closing brace for the method
 
   // Facebook/Instagram-style notification dropdown
   void _showNotificationDropdown(BuildContext context) {
@@ -464,7 +478,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
                 Padding(
                   padding: EdgeInsets.all(16),
                   child: Row(
@@ -493,53 +506,70 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                     ],
                   ),
                 ),
-
-                // Notification List
                 SizedBox(
                   height: 300,
-                  child: ListView(
-                    padding: EdgeInsets.zero,
-                    children: [
-                      _buildNotificationItem(
-                        '�‍💼',
-                        'Carlos Santos',
-                        'commented on your post about vegetable scraps',
-                        '5m',
-                        true,
-                      ),
-                      _buildNotificationItem(
-                        '👨‍💼',
-                        'John Cruz',
-                        'reacted 👍 to your comment',
-                        '12m',
-                        true,
-                      ),
-                      _buildNotificationItem(
-                        '👨‍🍳',
-                        'Chef Miguel',
-                        'shared a new recipe in Zero Waste',
-                        '1h',
-                        false,
-                      ),
-                      _buildNotificationItem(
-                        '👩‍🍳',
-                        'Anna Lee',
-                        'liked your post',
-                        '2h',
-                        false,
-                      ),
-                      _buildNotificationItem(
-                        '🍎',
-                        'FoodLoop',
-                        'New food donations available near you',
-                        '3h',
-                        false,
-                      ),
-                    ],
+                  child: Consumer(
+                    builder: (context, ref, child) {
+                      final notificationsAsync = ref.watch(notificationsProvider);
+                      return notificationsAsync.when(
+                        data: (notifications) {
+                          if (notifications.isEmpty) {
+                            return Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.notifications_none, size: 48, color: Colors.grey[400]),
+                                  SizedBox(height: 12),
+                                  Text(
+                                    'No notifications yet',
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.grey[600],
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                          
+                          // Show only the first 3 notifications in dropdown
+                          final displayNotifications = notifications.take(3).toList();
+                          
+                          return ListView(
+                            padding: EdgeInsets.zero,
+                            children: displayNotifications.map((notification) {
+                              final createdAt = DateTime.parse(notification['created_at']);
+                              final timeAgo = _formatTimeAgo(createdAt);
+                              
+                              return _buildNotificationItem(
+                                _getNotificationIcon(notification['type']),
+                                notification['title'] ?? 'FoodLoop',
+                                notification['message'] ?? '',
+                                timeAgo,
+                                !(notification['is_read'] ?? true),
+                                () {
+                                  // Mark as read when clicked
+                                  DatabaseNotificationService().markAsRead(notification['id']);
+                                  ref.invalidate(notificationsProvider);
+                                  ref.invalidate(unreadNotificationsCountProvider);
+                                },
+                              );
+                            }).toList(),
+                          );
+                        },
+                        loading: () => Center(
+                          child: CircularProgressIndicator(color: Colors.orange[600]),
+                        ),
+                        error: (_, __) => Center(
+                          child: Text(
+                            'Error loading notifications',
+                            style: GoogleFonts.poppins(color: Colors.grey[600]),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
-
-                // View All Button
                 Container(
                   padding: EdgeInsets.all(16),
                   child: Center(
@@ -570,9 +600,42 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     );
   }
 
+  // Helper methods for notifications
+  String _formatTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    
+    if (difference.inMinutes < 1) {
+      return 'just now';
+    } else if (difference.inHours < 1) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inDays < 1) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}d ago';
+    } else {
+      return '${(difference.inDays / 7).floor()}w ago';
+    }
+  }
+
+  String _getNotificationIcon(String? type) {
+    switch (type) {
+      case 'food_claimed':
+        return '🎉';
+      case 'new_message':
+        return '💬';
+      case 'food_expiring':
+        return '⏰';
+      default:
+        return '🍎';
+    }
+  }
+
   Widget _buildNotificationItem(
-      String avatar, String name, String message, String time, bool isUnread) {
-    return Container(
+      String avatar, String name, String message, String time, bool isUnread, [VoidCallback? onTap]) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: isUnread ? Colors.blue[50] : Colors.transparent,
@@ -657,6 +720,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
             ),
         ],
       ),
+    ),
     );
   }
 }

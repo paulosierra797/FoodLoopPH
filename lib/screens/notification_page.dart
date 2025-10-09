@@ -1,39 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import '../services/user_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/notifications_provider.dart';
+import '../services/database_notification_service.dart';
 
-class NotificationPage extends StatefulWidget {
+class NotificationPage extends ConsumerStatefulWidget {
   const NotificationPage({super.key});
 
   @override
-  _NotificationPageState createState() => _NotificationPageState();
+  ConsumerState<NotificationPage> createState() => _NotificationPageState();
 }
 
-class _NotificationPageState extends State<NotificationPage> {
-  // Sample notifications - can be empty to show "no notifications"
-  List<Map<String, dynamic>> notifications = [
-    // Uncomment these to show sample notifications
-    // {
-    //   "id": 1,
-    //   "title": "New comment on your post",
-    //   "message": "Carlos commented on your zero waste tips post",
-    //   "time": "2 hours ago",
-    //   "isRead": false,
-    //   "type": "comment",
-    // },
-    // {
-    //   "id": 2,
-    //   "title": "Someone liked your post",
-    //   "message": "Your recipe post received 5 new likes",
-    //   "time": "4 hours ago",
-    //   "isRead": true,
-    //   "type": "like",
-    // },
-  ];
+class _NotificationPageState extends ConsumerState<NotificationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final notificationsAsync = ref.watch(notificationsProvider);
+    
     return Scaffold(
       backgroundColor: Colors.amber[700],
       body: SafeArea(
@@ -44,19 +27,13 @@ class _NotificationPageState extends State<NotificationPage> {
               color: Colors.amber[700],
               child: Row(
                 children: [
-                  Consumer<UserService>(
-                    builder: (context, userService, child) {
-                      final userName =
-                          userService.currentUser?.firstName ?? "User";
-                      return Text(
-                        "Good morning, $userName",
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      );
-                    },
+                  Text(
+                    "Notifications",
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
                   ),
                   Spacer(),
                   Icon(Icons.notifications, color: Colors.black87, size: 24),
@@ -99,27 +76,61 @@ class _NotificationPageState extends State<NotificationPage> {
                             ),
                           ),
                           Spacer(),
-                          if (notifications.isNotEmpty)
-                            GestureDetector(
-                              onTap: _markAllAsRead,
-                              child: Text(
-                                "Mark all read",
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  color: Colors.amber[700],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            )
-                          else
-                            Container(width: 36),
+                          notificationsAsync.when(
+                            data: (notifications) {
+                              final unreadCount = notifications.where((n) => !(n['is_read'] ?? true)).length;
+                              return unreadCount > 0
+                                  ? GestureDetector(
+                                      onTap: () => _markAllAsRead(),
+                                      child: Text(
+                                        "Mark all read",
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          color: Colors.amber[700],
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    )
+                                  : Container(width: 36);
+                            },
+                            loading: () => Container(width: 36),
+                            error: (_, __) => Container(width: 36),
+                          ),
                         ],
                       ),
                       SizedBox(height: 32),
                       Expanded(
-                        child: notifications.isEmpty
-                            ? _buildEmptyNotifications()
-                            : _buildNotificationsList(),
+                        child: notificationsAsync.when(
+                          data: (notifications) => notifications.isEmpty
+                              ? _buildEmptyNotifications()
+                              : _buildNotificationsList(notifications),
+                          loading: () => Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.amber[700],
+                            ),
+                          ),
+                          error: (error, stack) => Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.error_outline, size: 48, color: Colors.grey[400]),
+                                SizedBox(height: 16),
+                                Text(
+                                  'Error loading notifications',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                ElevatedButton(
+                                  onPressed: () => ref.invalidate(notificationsProvider),
+                                  child: Text('Retry'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -169,53 +180,30 @@ class _NotificationPageState extends State<NotificationPage> {
               height: 1.5,
             ),
           ),
-          SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: () {
-              // Add sample notifications for demo
-              setState(() {
-                notifications = [
-                  {
-                    "id": 1,
-                    "title": "Welcome to FoodLoop!",
-                    "message":
-                        "Thanks for joining our community. Start exploring now!",
-                    "time": "now",
-                    "isRead": false,
-                    "type": "welcome",
-                  },
-                  {
-                    "id": 2,
-                    "title": "Community Update",
-                    "message": "New features available in the community forum",
-                    "time": "1 hour ago",
-                    "isRead": false,
-                    "type": "update",
-                  },
-                ];
-              });
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.amber[700],
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(25),
-              ),
-            ),
-            child: Text(
-              "Add Sample Notifications",
-              style: GoogleFonts.poppins(
-                color: Colors.white,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
+
         ],
       ),
     );
   }
 
-  Widget _buildNotificationsList() {
+  String _formatTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    
+    if (difference.inMinutes < 1) {
+      return 'just now';
+    } else if (difference.inHours < 1) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inDays < 1) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}d ago';
+    } else {
+      return '${(difference.inDays / 7).floor()}w ago';
+    }
+  }
+
+  Widget _buildNotificationsList(List<Map<String, dynamic>> notifications) {
     return ListView.builder(
       itemCount: notifications.length,
       itemBuilder: (context, index) {
@@ -230,12 +218,16 @@ class _NotificationPageState extends State<NotificationPage> {
     Color iconColor;
 
     switch (notification['type']) {
-      case 'comment':
+      case 'food_claimed':
+        iconData = Icons.restaurant;
+        iconColor = Colors.orange;
+        break;
+      case 'new_message':
         iconData = Icons.chat_bubble;
         iconColor = Colors.blue;
         break;
-      case 'like':
-        iconData = Icons.favorite;
+      case 'food_expiring':
+        iconData = Icons.schedule;
         iconColor = Colors.red;
         break;
       case 'welcome':
@@ -254,13 +246,17 @@ class _NotificationPageState extends State<NotificationPage> {
     return Dismissible(
       key: Key(notification['id'].toString()),
       direction: DismissDirection.endToStart,
-      onDismissed: (direction) {
-        setState(() {
-          notifications.removeAt(index);
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Notification dismissed')),
-        );
+      onDismissed: (direction) async {
+        // Delete notification from database
+        await DatabaseNotificationService().deleteNotification(notification['id']);
+        ref.invalidate(notificationsProvider);
+        ref.invalidate(unreadNotificationsCountProvider);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Notification dismissed')),
+          );
+        }
       },
       background: Container(
         alignment: Alignment.centerRight,
@@ -271,15 +267,23 @@ class _NotificationPageState extends State<NotificationPage> {
         ),
         child: Icon(Icons.delete, color: Colors.white),
       ),
-      child: Container(
-        margin: EdgeInsets.only(bottom: 12),
-        padding: EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: notification['isRead'] ? Colors.white : Colors.amber[50],
+      child: InkWell(
+        onTap: () async {
+          // Mark as read when tapped
+          if (!(notification['is_read'] ?? false)) {
+            await DatabaseNotificationService().markAsRead(notification['id']);
+            ref.invalidate(notificationsProvider);
+            ref.invalidate(unreadNotificationsCountProvider);
+          }
+        },
+        child: Container(
+          margin: EdgeInsets.only(bottom: 12),
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+          color: (notification['is_read'] ?? false) ? Colors.white : Colors.amber[50],
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color:
-                notification['isRead'] ? Colors.grey[200]! : Colors.amber[200]!,
+            color: (notification['is_read'] ?? false) ? Colors.grey[200]! : Colors.amber[200]!,
           ),
         ),
         child: Row(
@@ -317,7 +321,7 @@ class _NotificationPageState extends State<NotificationPage> {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    notification['time'],
+                    _formatTimeAgo(DateTime.parse(notification['created_at'])),
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       color: Colors.grey[500],
@@ -326,7 +330,7 @@ class _NotificationPageState extends State<NotificationPage> {
                 ],
               ),
             ),
-            if (!notification['isRead'])
+            if (!(notification['is_read'] ?? false))
               Container(
                 width: 8,
                 height: 8,
@@ -337,15 +341,14 @@ class _NotificationPageState extends State<NotificationPage> {
               ),
           ],
         ),
+        ),
       ),
     );
   }
 
-  void _markAllAsRead() {
-    setState(() {
-      for (var notification in notifications) {
-        notification['isRead'] = true;
-      }
-    });
+  void _markAllAsRead() async {
+    await DatabaseNotificationService().markAllAsRead();
+    ref.invalidate(notificationsProvider);
+    ref.invalidate(unreadNotificationsCountProvider);
   }
 }

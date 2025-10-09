@@ -706,6 +706,33 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
               .from('food_listings')
               .update({'status': 'claimed'}).eq('id', listingId);
         } catch (_) {}
+
+        // Create notification for the donor (manual fallback if trigger doesn't work)
+        try {
+          final donorId = listing['posted_by'];
+          if (donorId != null && donorId != user.id) {
+            // Get claimer's name
+            final claimerResponse = await supabase
+                .from('users')
+                .select('first_name, last_name')
+                .eq('id', user.id)
+                .single();
+            
+            final claimerName = '${claimerResponse['first_name'] ?? ''} ${claimerResponse['last_name'] ?? ''}'.trim();
+            final foodTitle = listing['title'] ?? 'Food item';
+            
+            await supabase.from('notifications').insert({
+              'user_id': donorId,
+              'title': 'Food Item Claimed! 🎉',
+              'message': '$claimerName has claimed your "$foodTitle"',
+              'type': 'food_claimed',
+              'related_id': listingId,
+              'is_read': false,
+            });
+          }
+        } catch (e) {
+          debugPrint('Error creating manual notification: $e');
+        }
       } else {
         throw Exception('Unable to claim this food item');
       }
