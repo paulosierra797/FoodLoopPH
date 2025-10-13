@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import 'dart:io';
 import '../providers/food_listings_provider.dart';
 import '../services/storage_service.dart';
@@ -31,6 +33,11 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
   List<File> _selectedImages = [];
   final ImagePicker _picker = ImagePicker();
 
+  // Location variables
+  LatLng? _selectedLocation;
+  String _locationStatus = 'Tap to set location';
+  bool _isLoadingLocation = false;
+
   final List<String> _categories = [
     'Prepared Food',
     'Fresh Produce',
@@ -47,6 +54,140 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
     '1 week',
     'More than a week'
   ];
+
+  // Get current location
+  Future<void> _getCurrentLocation() async {
+    setState(() {
+      _isLoadingLocation = true;
+      _locationStatus = 'Getting location...';
+    });
+
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
+        Position position = await Geolocator.getCurrentPosition();
+        setState(() {
+          _selectedLocation = LatLng(position.latitude, position.longitude);
+          _locationStatus = 'Location set automatically';
+          _isLoadingLocation = false;
+        });
+      } else {
+        setState(() {
+          _locationStatus = 'Location permission denied';
+          _isLoadingLocation = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _locationStatus = 'Failed to get location';
+        _isLoadingLocation = false;
+      });
+    }
+  }
+
+  // Show location picker dialog
+  void _showLocationPicker() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Set Pickup Location'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.my_location, color: Colors.orange[600]),
+              title: Text('Use Current Location'),
+              subtitle: Text('Automatically detect your location'),
+              onTap: () {
+                Navigator.pop(context);
+                _getCurrentLocation();
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.location_on, color: Colors.orange[600]),
+              title: Text('Select on Map'),
+              subtitle: Text('Choose location on map'),
+              onTap: () {
+                Navigator.pop(context);
+                _showMapPicker();
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Show map picker (simplified for now - will be a basic coordinate input)
+  void _showMapPicker() {
+    final latController = TextEditingController();
+    final lngController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Enter Coordinates'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: latController,
+              decoration: InputDecoration(
+                labelText: 'Latitude',
+                hintText: 'e.g., 14.329620',
+              ),
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
+            ),
+            SizedBox(height: 16),
+            TextField(
+              controller: lngController,
+              decoration: InputDecoration(
+                labelText: 'Longitude',
+                hintText: 'e.g., 120.937140',
+              ),
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final lat = double.tryParse(latController.text);
+              final lng = double.tryParse(lngController.text);
+
+              if (lat != null && lng != null) {
+                setState(() {
+                  _selectedLocation = LatLng(lat, lng);
+                  _locationStatus = 'Location set manually';
+                });
+                Navigator.pop(context);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Please enter valid coordinates')),
+                );
+              }
+            },
+            child: Text('Set Location'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -279,6 +420,88 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
                           icon: Icons.home,
                           required: true,
                           maxLines: 2,
+                        ),
+
+                        SizedBox(height: 12),
+
+                        // Location Picker Button
+                        Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: _selectedLocation != null
+                                  ? Colors.green
+                                  : Colors.grey[300]!,
+                              width: 1,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            color: _selectedLocation != null
+                                ? Colors.green[50]
+                                : Colors.grey[50],
+                          ),
+                          child: InkWell(
+                            onTap: _showLocationPicker,
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    _selectedLocation != null
+                                        ? Icons.location_on
+                                        : Icons.add_location,
+                                    color: _selectedLocation != null
+                                        ? Colors.green[600]
+                                        : Colors.grey[600],
+                                  ),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          _selectedLocation != null
+                                              ? 'Location Set'
+                                              : 'Set Pickup Location',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w500,
+                                            color: _selectedLocation != null
+                                                ? Colors.green[700]
+                                                : Colors.grey[700],
+                                          ),
+                                        ),
+                                        SizedBox(height: 2),
+                                        Text(
+                                          _isLoadingLocation
+                                              ? 'Getting location...'
+                                              : _selectedLocation != null
+                                                  ? 'Lat: ${_selectedLocation!.latitude.toStringAsFixed(6)}, Lng: ${_selectedLocation!.longitude.toStringAsFixed(6)}'
+                                                  : 'Tap to set location for map display',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 12,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (_isLoadingLocation)
+                                    SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                Colors.orange[600]!),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
 
                         SizedBox(height: 16),
@@ -810,6 +1033,8 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
         'expiration_date': _mapExpiryToDate(_selectedExpiry),
         'images': imageUrls,
         'contact_number': _contactController.text.trim(),
+        'latitude': _selectedLocation?.latitude,
+        'longitude': _selectedLocation?.longitude,
         'is_urgent': _isUrgent,
         'created_at': DateTime.now().toIso8601String(),
       });

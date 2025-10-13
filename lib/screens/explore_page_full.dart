@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import '../providers/food_listings_provider.dart';
 
 class ExplorePage extends ConsumerStatefulWidget {
@@ -17,6 +19,134 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
   String _searchQuery = '';
   String _selectedCategory = 'All';
   final TextEditingController _searchController = TextEditingController();
+
+  // Map related variables
+  GoogleMapController? _mapController;
+  Set<Marker> _markers = {};
+  LatLng _currentLocation =
+      LatLng(14.329620, 120.937140); // Default: Dasmariñas center
+  bool _isLoadingLocation = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentLocation();
+  }
+
+  // Get user's current location
+  Future<void> _getCurrentLocation() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
+        Position position = await Geolocator.getCurrentPosition();
+        setState(() {
+          _currentLocation = LatLng(position.latitude, position.longitude);
+          _isLoadingLocation = false;
+        });
+        _createMarkers();
+      } else {
+        setState(() {
+          _isLoadingLocation = false;
+        });
+        _createMarkers();
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingLocation = false;
+      });
+      _createMarkers();
+    }
+  }
+
+  // Create markers for food listings
+  void _createMarkers() {
+    final listingsAsync = ref.read(foodListingsProvider);
+    listingsAsync.when(
+      data: (listings) {
+        Set<Marker> markers = {};
+
+        // Add user location marker
+        markers.add(
+          Marker(
+            markerId: MarkerId('user_location'),
+            position: _currentLocation,
+            icon:
+                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+            infoWindow: InfoWindow(
+              title: 'Your Location',
+              snippet: 'You are here',
+            ),
+          ),
+        );
+
+        // Add food listing markers
+        for (int i = 0; i < listings.length; i++) {
+          final listing = listings[i];
+          final lat = listing['latitude'] ?? listing['lat'];
+          final lng = listing['longitude'] ?? listing['lng'];
+
+          if (lat != null && lng != null) {
+            Color markerColor =
+                _getMarkerColorForCategory(listing['category'] ?? 'Other');
+
+            markers.add(
+              Marker(
+                markerId: MarkerId('food_$i'),
+                position: LatLng(lat.toDouble(), lng.toDouble()),
+                icon: BitmapDescriptor.defaultMarkerWithHue(
+                    _getHueForColor(markerColor)),
+                infoWindow: InfoWindow(
+                  title: listing['title'] ?? 'Food Item',
+                  snippet:
+                      '${listing['description'] ?? 'Food'} - ${listing['quantity'] ?? 'Available'}',
+                ),
+              ),
+            );
+          }
+        }
+
+        if (mounted) {
+          setState(() {
+            _markers = markers;
+          });
+        }
+      },
+      loading: () {},
+      error: (error, stack) {
+        debugPrint('Error creating markers: $error');
+      },
+    );
+  }
+
+  // Get marker color based on food category
+  Color _getMarkerColorForCategory(String category) {
+    switch (category.toLowerCase()) {
+      case 'fast food':
+        return Colors.red;
+      case 'filipino':
+        return Colors.orange;
+      case 'bakery':
+        return Colors.brown;
+      case 'asian':
+        return Colors.purple;
+      default:
+        return Colors.green;
+    }
+  }
+
+  // Convert Color to Google Maps hue
+  double _getHueForColor(Color color) {
+    if (color == Colors.red) return BitmapDescriptor.hueRed;
+    if (color == Colors.orange) return BitmapDescriptor.hueOrange;
+    if (color == Colors.brown) return BitmapDescriptor.hueRose;
+    if (color == Colors.purple) return BitmapDescriptor.hueViolet;
+    return BitmapDescriptor.hueGreen;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -181,6 +311,9 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
         setState(() {
           _isListView = isListView;
         });
+        if (!_isListView) {
+          _createMarkers(); // Create markers when switching to map view
+        }
       },
       child: Container(
         padding: EdgeInsets.all(8),
@@ -212,65 +345,125 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
   }
 
   Widget _buildMapView(List<Map<String, dynamic>> listings) {
-    return Container(
-      child: Stack(
-        children: [
-          // Map placeholder
-          Container(
-            color: Colors.grey[200],
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.map, size: 64, color: Colors.grey[400]),
-                  SizedBox(height: 16),
-                  Text(
-                    "Map View",
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Text(
-                    "Interactive map coming soon",
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: Colors.grey[500],
-                    ),
-                  ),
-                ],
+    if (_isLoadingLocation) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(color: Colors.orange[600]),
+            SizedBox(height: 16),
+            Text(
+              'Loading map...',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                color: Colors.grey[600],
               ),
             ),
+          ],
+        ),
+      );
+    }
+
+    return Stack(
+      children: [
+        GoogleMap(
+          onMapCreated: (GoogleMapController controller) {
+            _mapController = controller;
+          },
+          initialCameraPosition: CameraPosition(
+            target: _currentLocation,
+            zoom: 12.0,
           ),
-          // Map markers (simulated)
-          ...List.generate(listings.length, (index) {
-            return Positioned(
-              top: 100.0 + (index * 50),
-              left: 50.0 + (index * 40),
-              child: GestureDetector(
-                onTap: () => _showLocationDetails(listings[index]),
-                child: Container(
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.orange[600],
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Icon(Icons.restaurant, color: Colors.white, size: 16),
+          markers: _markers,
+          myLocationEnabled: true,
+          myLocationButtonEnabled: false,
+          zoomControlsEnabled: false,
+          mapType: MapType.normal,
+        ),
+        // Custom location button
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: FloatingActionButton(
+            mini: true,
+            backgroundColor: Colors.white,
+            onPressed: _goToCurrentLocation,
+            child: Icon(Icons.my_location, color: Colors.orange[600]),
+          ),
+        ),
+        // Legend for marker colors
+        Positioned(
+          top: 16,
+          left: 16,
+          child: Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
                 ),
-              ),
-            );
-          }),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Food Categories',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 4),
+                _buildLegendItem('Fast Food', Colors.red),
+                _buildLegendItem('Filipino', Colors.orange),
+                _buildLegendItem('Bakery', Colors.brown),
+                _buildLegendItem('Asian', Colors.purple),
+                _buildLegendItem('Others', Colors.green),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLegendItem(String category, Color color) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          SizedBox(width: 6),
+          Text(
+            category,
+            style: GoogleFonts.poppins(fontSize: 10),
+          ),
         ],
       ),
     );
+  }
+
+  // Go to current location
+  void _goToCurrentLocation() async {
+    if (_mapController != null) {
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(_currentLocation, 15),
+      );
+    }
   }
 
   Widget _buildFoodCard(Map<String, dynamic> listing) {
@@ -493,16 +686,16 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(listing["name"]),
+        title: Text(listing["name"] ?? "Unknown Location"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Food: ${listing["food"]}"),
+            Text("Food: ${listing["food"] ?? "Not specified"}"),
             SizedBox(height: 8),
-            Text("Address: ${listing["address"]}"),
+            Text("Address: ${listing["address"] ?? "Address not available"}"),
             SizedBox(height: 8),
-            Text("Distance: ${listing["distance"]}"),
+            Text("Distance: ${listing["distance"] ?? "Unknown"}"),
           ],
         ),
         actions: [
@@ -720,10 +913,12 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                 .select('first_name, last_name')
                 .eq('id', user.id)
                 .single();
-            
-            final claimerName = '${claimerResponse['first_name'] ?? ''} ${claimerResponse['last_name'] ?? ''}'.trim();
+
+            final claimerName =
+                '${claimerResponse['first_name'] ?? ''} ${claimerResponse['last_name'] ?? ''}'
+                    .trim();
             final foodTitle = listing['title'] ?? 'Food item';
-            
+
             await supabase.from('notifications').insert({
               'user_id': donorId,
               'title': 'Food Item Claimed! 🎉',

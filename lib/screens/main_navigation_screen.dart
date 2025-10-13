@@ -78,7 +78,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
               Stack(
                 children: [
                   IconButton(
-                    icon: Icon(Icons.notifications_outlined, color: Colors.white),
+                    icon:
+                        Icon(Icons.notifications_outlined, color: Colors.white),
                     onPressed: () {
                       _showNotificationDropdown(context);
                     },
@@ -86,7 +87,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                   // Notification badge with real count
                   Consumer(
                     builder: (context, ref, child) {
-                      final unreadCountAsync = ref.watch(unreadNotificationsCountProvider);
+                      final unreadCountAsync =
+                          ref.watch(unreadNotificationsCountProvider);
                       return unreadCountAsync.when(
                         data: (count) {
                           if (count > 0) {
@@ -425,7 +427,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                   height: 300,
                   child: Consumer(
                     builder: (context, ref, child) {
-                      final notificationsAsync = ref.watch(notificationsProvider);
+                      final notificationsAsync =
+                          ref.watch(notificationsProvider);
                       return notificationsAsync.when(
                         data: (notifications) {
                           if (notifications.isEmpty) {
@@ -433,7 +436,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.notifications_none, size: 48, color: Colors.grey[400]),
+                                  Icon(Icons.notifications_none,
+                                      size: 48, color: Colors.grey[400]),
                                   SizedBox(height: 12),
                                   Text(
                                     'No notifications yet',
@@ -446,16 +450,18 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                               ),
                             );
                           }
-                          
+
                           // Show only the first 3 notifications in dropdown
-                          final displayNotifications = notifications.take(3).toList();
-                          
+                          final displayNotifications =
+                              notifications.take(3).toList();
+
                           return ListView(
                             padding: EdgeInsets.zero,
                             children: displayNotifications.map((notification) {
-                              final createdAt = DateTime.parse(notification['created_at']);
+                              final createdAt =
+                                  DateTime.parse(notification['created_at']);
                               final timeAgo = _formatTimeAgo(createdAt);
-                              
+
                               return _buildNotificationItem(
                                 _getNotificationIcon(notification['type']),
                                 notification['title'] ?? 'FoodLoop',
@@ -464,16 +470,19 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                                 !(notification['is_read'] ?? true),
                                 () {
                                   // Mark as read when clicked
-                                  DatabaseNotificationService().markAsRead(notification['id']);
+                                  DatabaseNotificationService()
+                                      .markAsRead(notification['id']);
                                   ref.invalidate(notificationsProvider);
-                                  ref.invalidate(unreadNotificationsCountProvider);
+                                  ref.invalidate(
+                                      unreadNotificationsCountProvider);
                                 },
                               );
                             }).toList(),
                           );
                         },
                         loading: () => Center(
-                          child: CircularProgressIndicator(color: Colors.orange[600]),
+                          child: CircularProgressIndicator(
+                              color: Colors.orange[600]),
                         ),
                         error: (_, __) => Center(
                           child: Text(
@@ -519,7 +528,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   String _formatTimeAgo(DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
-    
+
     if (difference.inMinutes < 1) {
       return 'just now';
     } else if (difference.inHours < 1) {
@@ -547,95 +556,96 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   }
 
   Widget _buildNotificationItem(
-      String avatar, String name, String message, String time, bool isUnread, [VoidCallback? onTap]) {
+      String avatar, String name, String message, String time, bool isUnread,
+      [VoidCallback? onTap]) {
     return InkWell(
       onTap: onTap,
       child: Container(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isUnread ? Colors.blue[50] : Colors.transparent,
-      ),
-      child: Row(
-        children: [
-          // Avatar with online indicator for unread
-          Stack(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: Colors.orange[100],
-                child: Text(avatar, style: TextStyle(fontSize: 16)),
-              ),
-              if (isUnread)
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: Colors.blue[600],
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isUnread ? Colors.blue[50] : Colors.transparent,
+        ),
+        child: Row(
+          children: [
+            // Avatar with online indicator for unread
+            Stack(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.orange[100],
+                  child: Text(avatar, style: TextStyle(fontSize: 16)),
+                ),
+                if (isUnread)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: Colors.blue[600],
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
                     ),
                   ),
-                ),
-            ],
-          ),
-          SizedBox(width: 12),
-
-          // Content
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RichText(
-                  text: TextSpan(
-                    children: [
-                      TextSpan(
-                        text: '$name ',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      TextSpan(
-                        text: message,
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ],
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: 2),
-                Text(
-                  time,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
-                ),
               ],
             ),
-          ),
+            SizedBox(width: 12),
 
-          // Action button (optional)
-          if (isUnread)
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: Colors.blue[600],
-                shape: BoxShape.circle,
+            // Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  RichText(
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '$name ',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        TextSpan(
+                          text: message,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    time,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
               ),
             ),
-        ],
+
+            // Action button (optional)
+            if (isUnread)
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: Colors.blue[600],
+                  shape: BoxShape.circle,
+                ),
+              ),
+          ],
+        ),
       ),
-    ),
     );
   }
 }
