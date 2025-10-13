@@ -60,177 +60,157 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
         return false; // Prevent default pop behavior
       },
       child: Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Custom Header
-            Container(
-              padding: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      // Navigate back to Home tab instead of using Navigator.pop
-                      // which was causing logout issues in tab-based navigation
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
-                      );
-                    },
-                    child: Container(
-                      padding: EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Icon(Icons.arrow_back,
-                          color: Colors.grey[700], size: 24),
+        backgroundColor: Colors.grey[50],
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Custom Header
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: Offset(0, 2),
                     ),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        'Add Food Donation',
-                        style: GoogleFonts.poppins(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[800],
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 40), // Balance the back button
-                ],
-              ),
-            ),
-
-            // Main Content
-            Expanded(
-              child: SingleChildScrollView(
-                physics: BouncingScrollPhysics(),
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header Section
-                      Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.all(20),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        // Navigate back to Home tab instead of using Navigator.pop
+                        // which was causing logout issues in tab-based navigation
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  const MainNavigationScreen()),
+                        );
+                      },
+                      child: Container(
+                        padding: EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Colors.orange[300]!, Colors.orange[500]!],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Icon(Icons.arrow_back,
+                            color: Colors.grey[700], size: 24),
+                      ),
+                    ),
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          'Add Food Donation',
+                          style: GoogleFonts.poppins(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[800],
                           ),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(Icons.volunteer_activism,
-                                color: Colors.white, size: 32),
-                            SizedBox(height: 8),
-                            Text(
-                              'Share Food, Share Hope',
-                              style: GoogleFonts.poppins(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Help reduce food waste by sharing with those in need',
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                color: Colors.white.withOpacity(0.9),
-                              ),
-                            ),
-                          ],
                         ),
                       ),
+                    ),
+                    SizedBox(width: 40), // Balance the back button
+                  ],
+                ),
+              ),
 
-                      SizedBox(height: 24),
-
-                      // Food Details Section
-                      _buildSectionHeader('Food Details', Icons.restaurant),
-                      SizedBox(height: 16),
-
-                      _buildTextField(
-                        controller: _foodNameController,
-                        label: 'Food Name',
-                        hint: 'e.g., Vegetable Soup, Bread Loaves',
-                        icon: Icons.fastfood,
-                        required: true,
-                      ),
-
-                      SizedBox(height: 16),
-
-                      _buildDropdownField(
-                        value: _selectedCategory,
-                        label: 'Food Category',
-                        items: _categories,
-                        icon: Icons.category,
-                        onChanged: (value) =>
-                            setState(() => _selectedCategory = value!),
-                      ),
-
-                      SizedBox(height: 16),
-
-                      // Use Column instead of Row on smaller screens
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          if (constraints.maxWidth < 400) {
-                            // Stacked layout for smaller screens
-                            return Column(
-                              children: [
-                                _buildTextField(
-                                  controller: _quantityController,
-                                  label: 'Quantity',
-                                  hint: 'e.g., 10 servings, 5 kg',
-                                  icon: Icons.scale,
-                                  required: true,
-                                ),
-                                SizedBox(height: 16),
-                                _buildDropdownField(
-                                  value: _selectedExpiry,
-                                  label: 'Best Before',
-                                  items: _expiryOptions,
-                                  icon: Icons.schedule,
-                                  onChanged: (value) =>
-                                      setState(() => _selectedExpiry = value!),
-                                ),
+              // Main Content
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: BouncingScrollPhysics(),
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header Section
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.orange[300]!,
+                                Colors.orange[500]!
                               ],
-                            );
-                          } else {
-                            // Side-by-side layout for larger screens
-                            return Row(
-                              children: [
-                                Expanded(
-                                  child: _buildTextField(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.volunteer_activism,
+                                  color: Colors.white, size: 32),
+                              SizedBox(height: 8),
+                              Text(
+                                'Share Food, Share Hope',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Help reduce food waste by sharing with those in need',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  color: Colors.white.withOpacity(0.9),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        SizedBox(height: 24),
+
+                        // Food Details Section
+                        _buildSectionHeader('Food Details', Icons.restaurant),
+                        SizedBox(height: 16),
+
+                        _buildTextField(
+                          controller: _foodNameController,
+                          label: 'Food Name',
+                          hint: 'e.g., Vegetable Soup, Bread Loaves',
+                          icon: Icons.fastfood,
+                          required: true,
+                        ),
+
+                        SizedBox(height: 16),
+
+                        _buildDropdownField(
+                          value: _selectedCategory,
+                          label: 'Food Category',
+                          items: _categories,
+                          icon: Icons.category,
+                          onChanged: (value) =>
+                              setState(() => _selectedCategory = value!),
+                        ),
+
+                        SizedBox(height: 16),
+
+                        // Use Column instead of Row on smaller screens
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            if (constraints.maxWidth < 400) {
+                              // Stacked layout for smaller screens
+                              return Column(
+                                children: [
+                                  _buildTextField(
                                     controller: _quantityController,
                                     label: 'Quantity',
                                     hint: 'e.g., 10 servings, 5 kg',
                                     icon: Icons.scale,
                                     required: true,
                                   ),
-                                ),
-                                SizedBox(width: 16),
-                                Expanded(
-                                  child: _buildDropdownField(
+                                  SizedBox(height: 16),
+                                  _buildDropdownField(
                                     value: _selectedExpiry,
                                     label: 'Best Before',
                                     items: _expiryOptions,
@@ -238,170 +218,195 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
                                     onChanged: (value) => setState(
                                         () => _selectedExpiry = value!),
                                   ),
-                                ),
-                              ],
-                            );
-                          }
-                        },
-                      ),
-
-                      SizedBox(height: 16),
-
-                      _buildTextField(
-                        controller: _descriptionController,
-                        label: 'Description (Optional)',
-                        hint: 'Additional details about the food...',
-                        icon: Icons.description,
-                        maxLines: 3,
-                      ),
-
-                      SizedBox(height: 16),
-
-                      // Image Upload Section
-                      _buildImageUploadSection(),
-
-                      SizedBox(height: 24),
-
-                      // Pickup Information Section
-                      _buildSectionHeader(
-                          'Pickup Information', Icons.location_on),
-                      SizedBox(height: 16),
-
-                      _buildTextField(
-                        controller: _addressController,
-                        label: 'Pickup Address',
-                        hint: 'Street, City, Province',
-                        icon: Icons.home,
-                        required: true,
-                        maxLines: 2,
-                      ),
-
-                      SizedBox(height: 16),
-
-                      _buildTextField(
-                        controller: _contactController,
-                        label: 'Contact Number',
-                        hint: '+63 9XX XXX XXXX',
-                        icon: Icons.phone,
-                        keyboardType: TextInputType.phone,
-                        required: true,
-                      ),
-
-                      SizedBox(height: 16),
-
-                      // Urgent Toggle
-                      Container(
-                        padding: EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: _isUrgent ? Colors.red[50] : Colors.grey[50],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _isUrgent
-                                ? Colors.red[200]!
-                                : Colors.grey[200]!,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.priority_high,
-                              color: _isUrgent
-                                  ? Colors.red[600]
-                                  : Colors.grey[600],
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                ],
+                              );
+                            } else {
+                              // Side-by-side layout for larger screens
+                              return Row(
                                 children: [
-                                  Text(
-                                    'Urgent Pickup',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: _isUrgent
-                                          ? Colors.red[700]
-                                          : Colors.grey[700],
+                                  Expanded(
+                                    child: _buildTextField(
+                                      controller: _quantityController,
+                                      label: 'Quantity',
+                                      hint: 'e.g., 10 servings, 5 kg',
+                                      icon: Icons.scale,
+                                      required: true,
                                     ),
                                   ),
-                                  Text(
-                                    'Food needs to be picked up today',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      color: _isUrgent
-                                          ? Colors.red[600]
-                                          : Colors.grey[600],
+                                  SizedBox(width: 16),
+                                  Expanded(
+                                    child: _buildDropdownField(
+                                      value: _selectedExpiry,
+                                      label: 'Best Before',
+                                      items: _expiryOptions,
+                                      icon: Icons.schedule,
+                                      onChanged: (value) => setState(
+                                          () => _selectedExpiry = value!),
                                     ),
                                   ),
                                 ],
-                              ),
-                            ),
-                            Switch(
-                              value: _isUrgent,
-                              onChanged: (value) =>
-                                  setState(() => _isUrgent = value),
-                              activeColor: Colors.red[600],
-                            ),
-                          ],
+                              );
+                            }
+                          },
                         ),
-                      ),
 
-                      SizedBox(height: 32),
+                        SizedBox(height: 16),
 
-                      // Submit Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange[600],
-                            foregroundColor: Colors.white,
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                        _buildTextField(
+                          controller: _descriptionController,
+                          label: 'Description (Optional)',
+                          hint: 'Additional details about the food...',
+                          icon: Icons.description,
+                          maxLines: 3,
+                        ),
+
+                        SizedBox(height: 16),
+
+                        // Image Upload Section
+                        _buildImageUploadSection(),
+
+                        SizedBox(height: 24),
+
+                        // Pickup Information Section
+                        _buildSectionHeader(
+                            'Pickup Information', Icons.location_on),
+                        SizedBox(height: 16),
+
+                        _buildTextField(
+                          controller: _addressController,
+                          label: 'Pickup Address',
+                          hint: 'Street, City, Province',
+                          icon: Icons.home,
+                          required: true,
+                          maxLines: 2,
+                        ),
+
+                        SizedBox(height: 16),
+
+                        _buildTextField(
+                          controller: _contactController,
+                          label: 'Contact Number',
+                          hint: '+63 9XX XXX XXXX',
+                          icon: Icons.phone,
+                          keyboardType: TextInputType.phone,
+                          required: true,
+                        ),
+
+                        SizedBox(height: 16),
+
+                        // Urgent Toggle
+                        Container(
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: _isUrgent ? Colors.red[50] : Colors.grey[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _isUrgent
+                                  ? Colors.red[200]!
+                                  : Colors.grey[200]!,
                             ),
                           ),
-                          onPressed: _isSubmitting ? null : _submitDonation,
-                          child: _isSubmitting
-                              ? SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white),
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.priority_high,
+                                color: _isUrgent
+                                    ? Colors.red[600]
+                                    : Colors.grey[600],
+                              ),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Icon(Icons.volunteer_activism, size: 24),
-                                    SizedBox(width: 8),
                                     Text(
-                                      'Share Food Donation',
+                                      'Urgent Pickup',
                                       style: GoogleFonts.poppins(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
+                                        color: _isUrgent
+                                            ? Colors.red[700]
+                                            : Colors.grey[700],
+                                      ),
+                                    ),
+                                    Text(
+                                      'Food needs to be picked up today',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        color: _isUrgent
+                                            ? Colors.red[600]
+                                            : Colors.grey[600],
                                       ),
                                     ),
                                   ],
                                 ),
+                              ),
+                              Switch(
+                                value: _isUrgent,
+                                onChanged: (value) =>
+                                    setState(() => _isUrgent = value),
+                                activeColor: Colors.red[600],
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
 
-                      SizedBox(height: 32),
-                      // Extra bottom padding for better scrolling
-                      SizedBox(
-                          height: MediaQuery.of(context).padding.bottom + 20),
-                    ],
+                        SizedBox(height: 32),
+
+                        // Submit Button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange[600],
+                              foregroundColor: Colors.white,
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed: _isSubmitting ? null : _submitDonation,
+                            child: _isSubmitting
+                                ? SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                          Colors.white),
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.volunteer_activism, size: 24),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Share Food Donation',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ),
+
+                        SizedBox(height: 32),
+                        // Extra bottom padding for better scrolling
+                        SizedBox(
+                            height: MediaQuery.of(context).padding.bottom + 20),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 

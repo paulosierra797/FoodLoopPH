@@ -5,38 +5,41 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class DashboardMetrics {
   final int totalDonations; // total successful claims
   final int activeListings; // listings with status = 'available'
-  final int peopleHelped; // unique users who shared (posted) at least one food (contributors)
+  final int
+      peopleHelped; // unique users who shared (posted) at least one food (contributors)
 
   const DashboardMetrics({
     required this.totalDonations,
     required this.activeListings,
     required this.peopleHelped,
   });
-}final dashboardMetricsProvider = FutureProvider<DashboardMetrics>((ref) async {
-	final supabase = Supabase.instance.client;
+}
 
-	int totalDonations = 0;
-	int activeListings = 0;
-	int peopleHelped = 0;
+final dashboardMetricsProvider = FutureProvider<DashboardMetrics>((ref) async {
+  final supabase = Supabase.instance.client;
 
-	// Count successful claims (food_claims rows)
-	try {
-		final claimsRows = await supabase.from('food_claims').select('id');
-		totalDonations = (claimsRows as List).length;
-	} catch (e) {
-		debugPrint('dashboard: failed to count claims: $e');
-	}
+  int totalDonations = 0;
+  int activeListings = 0;
+  int peopleHelped = 0;
 
-	// Count active listings (status = 'available')
-	try {
-		final activeRows = await supabase
-				.from('food_listings')
-				.select('id')
-				.eq('status', 'available');
-		activeListings = (activeRows as List).length;
-	} catch (e) {
-		debugPrint('dashboard: failed to count active listings: $e');
-	}
+  // Count successful claims (food_claims rows)
+  try {
+    final claimsRows = await supabase.from('food_claims').select('id');
+    totalDonations = (claimsRows as List).length;
+  } catch (e) {
+    debugPrint('dashboard: failed to count claims: $e');
+  }
+
+  // Count active listings (status = 'available')
+  try {
+    final activeRows = await supabase
+        .from('food_listings')
+        .select('id')
+        .eq('status', 'available');
+    activeListings = (activeRows as List).length;
+  } catch (e) {
+    debugPrint('dashboard: failed to count active listings: $e');
+  }
 
   // Count unique contributors (users who shared a food): distinct posted_by in food_listings
   try {
@@ -48,11 +51,12 @@ class DashboardMetrics {
     }
     peopleHelped = set.length;
   } catch (e) {
-    debugPrint('dashboard: failed to count people who help (unique contributors): $e');
-  }	return DashboardMetrics(
-		totalDonations: totalDonations,
-		activeListings: activeListings,
-		peopleHelped: peopleHelped,
-	);
+    debugPrint(
+        'dashboard: failed to count people who help (unique contributors): $e');
+  }
+  return DashboardMetrics(
+    totalDonations: totalDonations,
+    activeListings: activeListings,
+    peopleHelped: peopleHelped,
+  );
 });
-

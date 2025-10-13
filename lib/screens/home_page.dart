@@ -1,4 +1,3 @@
-
 // HomePage widget (donations list) - Riverpod version
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -9,30 +8,29 @@ import '../providers/food_listings_provider.dart';
 import '../providers/dashboard_metrics_provider.dart';
 import 'explore_page_full.dart';
 
-  String _getTimeAgo(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
+String _getTimeAgo(DateTime date) {
+  final now = DateTime.now();
+  final difference = now.difference(date);
 
-    if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
-    } else {
-      return 'Just now';
-    }
+  if (difference.inDays > 0) {
+    return '${difference.inDays}d ago';
+  } else if (difference.inHours > 0) {
+    return '${difference.inHours}h ago';
+  } else if (difference.inMinutes > 0) {
+    return '${difference.inMinutes}m ago';
+  } else {
+    return 'Just now';
   }
+}
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
-
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userService = ref.watch(userServiceProvider);
     final listingsAsync = ref.watch(foodListingsProvider);
-  final metricsAsync = ref.watch(dashboardMetricsProvider);
+    final metricsAsync = ref.watch(dashboardMetricsProvider);
     return Container(
       color: Colors.grey[50],
       child: Column(
@@ -103,11 +101,17 @@ class HomePage extends ConsumerWidget {
                   ),
                   loading: () => Row(
                     children: [
-                      Expanded(child: _buildDashboardCard('—', 'Total Donations', Icons.local_dining, Colors.green)),
+                      Expanded(
+                          child: _buildDashboardCard('—', 'Total Donations',
+                              Icons.local_dining, Colors.green)),
                       SizedBox(width: 12),
-                      Expanded(child: _buildDashboardCard('—', 'Active Listings', Icons.restaurant_menu, Colors.orange)),
+                      Expanded(
+                          child: _buildDashboardCard('—', 'Active Listings',
+                              Icons.restaurant_menu, Colors.orange)),
                       SizedBox(width: 12),
-                      Expanded(child: _buildDashboardCard('—', 'People that Help', Icons.people, Colors.blue)),
+                      Expanded(
+                          child: _buildDashboardCard('—', 'People that Help',
+                              Icons.people, Colors.blue)),
                     ],
                   ),
                   error: (e, st) {
@@ -115,11 +119,17 @@ class HomePage extends ConsumerWidget {
                     debugPrint('Dashboard metrics error: $e');
                     return Row(
                       children: [
-                        Expanded(child: _buildDashboardCard('0', 'Total Donations', Icons.local_dining, Colors.green)),
+                        Expanded(
+                            child: _buildDashboardCard('0', 'Total Donations',
+                                Icons.local_dining, Colors.green)),
                         SizedBox(width: 12),
-                        Expanded(child: _buildDashboardCard('0', 'Active Listings', Icons.restaurant_menu, Colors.orange)),
+                        Expanded(
+                            child: _buildDashboardCard('0', 'Active Listings',
+                                Icons.restaurant_menu, Colors.orange)),
                         SizedBox(width: 12),
-                        Expanded(child: _buildDashboardCard('0', 'People that Help', Icons.people, Colors.blue)),
+                        Expanded(
+                            child: _buildDashboardCard('0', 'People that Help',
+                                Icons.people, Colors.blue)),
                       ],
                     );
                   },
@@ -173,7 +183,8 @@ class HomePage extends ConsumerWidget {
                           return Center(
                             child: Text(
                               'No food listings yet.',
-                              style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey[600]),
+                              style: GoogleFonts.poppins(
+                                  fontSize: 16, color: Colors.grey[600]),
                             ),
                           );
                         }
@@ -188,7 +199,8 @@ class HomePage extends ConsumerWidget {
                         );
                       },
                       loading: () => Center(child: CircularProgressIndicator()),
-                      error: (e, st) => Center(child: Text('Error loading listings')),
+                      error: (e, st) =>
+                          Center(child: Text('Error loading listings')),
                     ),
                   ),
                 ],
@@ -255,7 +267,9 @@ class HomePage extends ConsumerWidget {
     final description = (item['description'] ?? '').toString();
     final location = (item['location'] ?? '').toString();
     final quantity = (item['quantity'] ?? '').toString();
-    final img = (item['images'] != null && item['images'] is List && (item['images'] as List).isNotEmpty)
+    final img = (item['images'] != null &&
+            item['images'] is List &&
+            (item['images'] as List).isNotEmpty)
         ? (item['images'][0] ?? '').toString()
         : '';
     final status = (item['status'] ?? '').toString();

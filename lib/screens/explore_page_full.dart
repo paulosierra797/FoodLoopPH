@@ -530,7 +530,8 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     return ClipRRect(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       child: SizedBox(
-        width: width ?? double.infinity, // Fill available width if not specified
+        width:
+            width ?? double.infinity, // Fill available width if not specified
         height: height,
         child: Container(
           color: Colors.grey[200],

@@ -22,7 +22,8 @@ class MainNavigationScreen extends ConsumerStatefulWidget {
   const MainNavigationScreen({super.key});
 
   @override
-  ConsumerState<MainNavigationScreen> createState() => _MainNavigationScreenState();
+  ConsumerState<MainNavigationScreen> createState() =>
+      _MainNavigationScreenState();
 }
 
 class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
@@ -50,295 +51,297 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-  final userService = ref.watch(userServiceProvider);
-  return WillPopScope(
-    onWillPop: () async {
-      // If not on Home tab, go to Home instead of popping the route stack
-      if (_selectedIndex != 0) {
-        setState(() => _selectedIndex = 0);
-        return false; // don't pop the route
-      }
-      // When already on Home, consume back to avoid navigating to Landing/Login
-      // Optionally, implement double-back-to-exit UX later.
-      return false;
-    },
-    child: Scaffold(
-      // Consistent AppBar with notification bell and hamburger menu on the right
-      appBar: AppBar(
-        backgroundColor: Colors.orange[600],
-        foregroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        automaticallyImplyLeading: false, // Remove default leading
-        actions: [
-          // Facebook/Instagram-style notification icon with badge
-          Stack(
-            children: [
-              IconButton(
-                icon: Icon(Icons.notifications_outlined, color: Colors.white),
-                onPressed: () {
-                  _showNotificationDropdown(context);
-                },
-              ),
-              // Notification badge
-              Positioned(
-                right: 8,
-                top: 8,
-                child: Container(
-                  padding: EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  constraints: BoxConstraints(
-                    minWidth: 16,
-                    minHeight: 16,
-                  ),
-                  child: Text(
-                    '3',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          // Hamburger menu moved to the right
-          Builder(
-            builder: (context) => IconButton(
-              icon: Icon(Icons.menu, color: Colors.white),
-              onPressed: () => Scaffold.of(context).openEndDrawer(),
-            ),
-          ),
-        ],
-      ),
-
-      // End Drawer for hamburger menu (right side)
-      endDrawer: SizedBox(
-        width: MediaQuery.of(context).size.width *
-            0.45, // Reduced from 0.85 to 0.45 (45%)
-        child: Drawer(
-          child: Container(
-            color: Colors.white,
-            child: SafeArea(
-              child: Column(
+    final userService = ref.watch(userServiceProvider);
+    return WillPopScope(
+        onWillPop: () async {
+          // If not on Home tab, go to Home instead of popping the route stack
+          if (_selectedIndex != 0) {
+            setState(() => _selectedIndex = 0);
+            return false; // don't pop the route
+          }
+          // When already on Home, consume back to avoid navigating to Landing/Login
+          // Optionally, implement double-back-to-exit UX later.
+          return false;
+        },
+        child: Scaffold(
+          // Consistent AppBar with notification bell and hamburger menu on the right
+          appBar: AppBar(
+            backgroundColor: Colors.orange[600],
+            foregroundColor: Colors.white,
+            elevation: 0,
+            centerTitle: true,
+            automaticallyImplyLeading: false, // Remove default leading
+            actions: [
+              // Facebook/Instagram-style notification icon with badge
+              Stack(
                 children: [
-                  // Header with User Info
-                  Container(
-                    padding: EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.orange[400]!, Colors.orange[600]!],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                  IconButton(
+                    icon:
+                        Icon(Icons.notifications_outlined, color: Colors.white),
+                    onPressed: () {
+                      _showNotificationDropdown(context);
+                    },
+                  ),
+                  // Notification badge
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                    ),
-                    child: Column(
-                      children: [
-                        CircleAvatar(
-                          radius: 30,
-                          backgroundColor: Colors.white,
-                          child: Text(
-                            (() {
-                              final user = userService.currentUser;
-                              final fullName = user?.fullName ?? "";
-                              return fullName.isNotEmpty
-                                  ? fullName
-                                      .split(' ')
-                                      .map((name) => name.isNotEmpty ? name[0] : '')
-                                      .take(2)
-                                      .join('')
-                                  : "JD";
-                            })(),
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange[600],
-                            ),
-                          ),
+                      constraints: BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        '3',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
                         ),
-                        SizedBox(height: 12),
-                        Column(
-                          children: [
-                            Text(
-                              userService.currentUser?.fullName ?? "Juan Dela Cruz",
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              userService.currentUser?.email ?? "juan.delacruz@example.com",
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                color: Colors.white70,
-                              ),
-                              textAlign: TextAlign.center,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Menu Items
-                  Expanded(
-                    child: ListView(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      children: [
-                        _buildDrawerItem(Icons.star_outline, 'My Watchlist',
-                            () {
-                          Navigator.of(context).pop();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => WatchlistPage()),
-                          );
-                        }),
-                        _buildDrawerItem(Icons.list_alt_outlined, 'My Listings',
-                            () {
-                          Navigator.of(context).pop();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => ListingsPage()),
-                          );
-                        }),
-                        Divider(height: 20, color: Colors.grey[300]),
-                        _buildDrawerItem(Icons.person_outline, 'Profile', () {
-                          Navigator.of(context).pop();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => ProfilePage()),
-                          );
-                        }),
-                        _buildDrawerItem(
-                            Icons.settings_outlined, 'Notification Settings',
-                            () {
-                          Navigator.of(context).pop();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) =>
-                                    NotificationSettingsPage()),
-                          );
-                        }),
-                        _buildDrawerItem(Icons.lock_outline, 'Change Password',
-                            () {
-                          Navigator.of(context).pop();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => ChangePasswordPage()),
-                          );
-                        }),
-                        _buildDrawerItem(Icons.info_outline, 'About', () {
-                          Navigator.of(context).pop();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => AboutPage()),
-                          );
-                        }),
-                      ],
-                    ),
-                  ),
-
-                  // Sign Out Button at the bottom
-                  Padding(
-                    padding: EdgeInsets.all(16),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red[500],
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 2,
-                        ),
-                        onPressed: () async {
-                          // Sign out from Supabase
-                          await Supabase.instance.client.auth.signOut();
-                          Navigator.of(context).pushAndRemoveUntil(
-                            MaterialPageRoute(
-                                builder: (context) => LandingPage()),
-                            (route) => false,
-                          );
-                        },
-                        icon: Icon(Icons.logout, size: 20),
-                        label: Text(
-                          'Sign Out',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ),
                 ],
               ),
+              // Hamburger menu moved to the right
+              Builder(
+                builder: (context) => IconButton(
+                  icon: Icon(Icons.menu, color: Colors.white),
+                  onPressed: () => Scaffold.of(context).openEndDrawer(),
+                ),
+              ),
+            ],
+          ),
+
+          // End Drawer for hamburger menu (right side)
+          endDrawer: SizedBox(
+            width: MediaQuery.of(context).size.width *
+                0.45, // Reduced from 0.85 to 0.45 (45%)
+            child: Drawer(
+              child: Container(
+                color: Colors.white,
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      // Header with User Info
+                      Container(
+                        padding: EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.orange[400]!, Colors.orange[600]!],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            CircleAvatar(
+                              radius: 30,
+                              backgroundColor: Colors.white,
+                              child: Text(
+                                (() {
+                                  final user = userService.currentUser;
+                                  final fullName = user?.fullName ?? "";
+                                  return fullName.isNotEmpty
+                                      ? fullName
+                                          .split(' ')
+                                          .map((name) =>
+                                              name.isNotEmpty ? name[0] : '')
+                                          .take(2)
+                                          .join('')
+                                      : "JD";
+                                })(),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange[600],
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 12),
+                            Column(
+                              children: [
+                                Text(
+                                  userService.currentUser?.fullName ??
+                                      "Juan Dela Cruz",
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  userService.currentUser?.email ??
+                                      "juan.delacruz@example.com",
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: Colors.white70,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Menu Items
+                      Expanded(
+                        child: ListView(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          children: [
+                            _buildDrawerItem(Icons.star_outline, 'My Watchlist',
+                                () {
+                              Navigator.of(context).pop();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => WatchlistPage()),
+                              );
+                            }),
+                            _buildDrawerItem(
+                                Icons.list_alt_outlined, 'My Listings', () {
+                              Navigator.of(context).pop();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => ListingsPage()),
+                              );
+                            }),
+                            Divider(height: 20, color: Colors.grey[300]),
+                            _buildDrawerItem(Icons.person_outline, 'Profile',
+                                () {
+                              Navigator.of(context).pop();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => ProfilePage()),
+                              );
+                            }),
+                            _buildDrawerItem(Icons.settings_outlined,
+                                'Notification Settings', () {
+                              Navigator.of(context).pop();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        NotificationSettingsPage()),
+                              );
+                            }),
+                            _buildDrawerItem(
+                                Icons.lock_outline, 'Change Password', () {
+                              Navigator.of(context).pop();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => ChangePasswordPage()),
+                              );
+                            }),
+                            _buildDrawerItem(Icons.info_outline, 'About', () {
+                              Navigator.of(context).pop();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => AboutPage()),
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+
+                      // Sign Out Button at the bottom
+                      Padding(
+                        padding: EdgeInsets.all(16),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red[500],
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 2,
+                            ),
+                            onPressed: () async {
+                              // Sign out from Supabase
+                              await Supabase.instance.client.auth.signOut();
+                              Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(
+                                    builder: (context) => LandingPage()),
+                                (route) => false,
+                              );
+                            },
+                            icon: Icon(Icons.logout, size: 20),
+                            label: Text(
+                              'Sign Out',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
-      ),
 
-      // Dynamic Body Content
-      body: _pages[_selectedIndex],
+          // Dynamic Body Content
+          body: _pages[_selectedIndex],
 
-      // Standard Bottom Navigation Bar
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        selectedItemColor: Colors.orange[600],
-        unselectedItemColor: Colors.grey[500],
-        backgroundColor: Colors.white,
-        elevation: 8,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
+          // Standard Bottom Navigation Bar
+          bottomNavigationBar: BottomNavigationBar(
+            type: BottomNavigationBarType.fixed,
+            currentIndex: _selectedIndex,
+            onTap: _onItemTapped,
+            selectedItemColor: Colors.orange[600],
+            unselectedItemColor: Colors.grey[500],
+            backgroundColor: Colors.white,
+            elevation: 8,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home_outlined),
+                activeIcon: Icon(Icons.home),
+                label: 'Home',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.search_outlined),
+                activeIcon: Icon(Icons.search),
+                label: 'Explore',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.add_circle_outline),
+                activeIcon: Icon(Icons.add_circle),
+                label: 'Share',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.people_outline),
+                activeIcon: Icon(Icons.people),
+                label: 'Community',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.mail_outline),
+                activeIcon: Icon(Icons.mail),
+                label: 'Messages',
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search_outlined),
-            activeIcon: Icon(Icons.search),
-            label: 'Explore',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add_circle_outline),
-            activeIcon: Icon(Icons.add_circle),
-            label: 'Share',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people_outline),
-            activeIcon: Icon(Icons.people),
-            label: 'Community',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.mail_outline),
-            activeIcon: Icon(Icons.mail),
-            label: 'Messages',
-          ),
-        ],
-      ),
-    ));
+        ));
   }
-
-
 
   Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
