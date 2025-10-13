@@ -50,7 +50,16 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return WillPopScope(
+      onWillPop: () async {
+        // Handle Android back button - navigate to MainNavigationScreen instead of popping
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
+        );
+        return false; // Prevent default pop behavior
+      },
+      child: Scaffold(
       backgroundColor: Colors.grey[50],
       body: SafeArea(
         child: Column(
@@ -71,7 +80,14 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: () => Navigator.pop(context),
+                    onTap: () {
+                      // Navigate back to Home tab instead of using Navigator.pop
+                      // which was causing logout issues in tab-based navigation
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
+                      );
+                    },
                     child: Container(
                       padding: EdgeInsets.all(8),
                       decoration: BoxDecoration(
@@ -385,6 +401,7 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
           ],
         ),
       ),
+    ),
     );
   }
 

@@ -16,15 +16,13 @@ import 'notification_settings_page.dart';
 import 'about_page.dart';
 import 'change_password_page.dart';
 import 'landing_page.dart';
-import '../services/user_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MainNavigationScreen extends ConsumerStatefulWidget {
   const MainNavigationScreen({super.key});
 
   @override
-  ConsumerState<MainNavigationScreen> createState() =>
-      _MainNavigationScreenState();
+  ConsumerState<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
 class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
@@ -52,8 +50,19 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final userService = ref.watch(userServiceProvider);
-    return Scaffold(
+  final userService = ref.watch(userServiceProvider);
+  return WillPopScope(
+    onWillPop: () async {
+      // If not on Home tab, go to Home instead of popping the route stack
+      if (_selectedIndex != 0) {
+        setState(() => _selectedIndex = 0);
+        return false; // don't pop the route
+      }
+      // When already on Home, consume back to avoid navigating to Landing/Login
+      // Optionally, implement double-back-to-exit UX later.
+      return false;
+    },
+    child: Scaffold(
       // Consistent AppBar with notification bell and hamburger menu on the right
       appBar: AppBar(
         backgroundColor: Colors.orange[600],
@@ -140,8 +149,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                               return fullName.isNotEmpty
                                   ? fullName
                                       .split(' ')
-                                      .map((name) =>
-                                          name.isNotEmpty ? name[0] : '')
+                                      .map((name) => name.isNotEmpty ? name[0] : '')
                                       .take(2)
                                       .join('')
                                   : "JD";
@@ -157,8 +165,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                         Column(
                           children: [
                             Text(
-                              userService.currentUser?.fullName ??
-                                  "Juan Dela Cruz",
+                              userService.currentUser?.fullName ?? "Juan Dela Cruz",
                               style: GoogleFonts.poppins(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -168,8 +175,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                             ),
                             SizedBox(height: 4),
                             Text(
-                              userService.currentUser?.email ??
-                                  "juan.delacruz@example.com",
+                              userService.currentUser?.email ?? "juan.delacruz@example.com",
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 color: Colors.white70,
@@ -292,141 +298,47 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
       // Dynamic Body Content
       body: _pages[_selectedIndex],
 
-      // Consistent Bottom Navigation Bar
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: Offset(0, -5),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Row(
-              children: [
-                // Left group (leans left)
-                Expanded(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    mainAxisSize: MainAxisSize.max,
-                    children: [
-                      _buildNavItemWithLabel(
-                          0, Icons.home_outlined, Icons.home, "Home"),
-                      _buildNavItemWithLabel(
-                          1, Icons.search_outlined, Icons.search, "Explore"),
-                    ],
-                  ),
-                ),
-
-                // Center add/share button (fixed center)
-                _buildAddButton(),
-
-                // Right group (leans right)
-                Expanded(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    mainAxisSize: MainAxisSize.max,
-                    children: [
-                      _buildNavItemWithLabel(
-                          3, Icons.people_outline, Icons.people, "Community"),
-                      _buildNavItemWithLabel(
-                          4, Icons.mail_outline, Icons.mail, "Messages"),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+      // Standard Bottom Navigation Bar
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        selectedItemColor: Colors.orange[600],
+        unselectedItemColor: Colors.grey[500],
+        backgroundColor: Colors.white,
+        elevation: 8,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Home',
           ),
-        ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search_outlined),
+            activeIcon: Icon(Icons.search),
+            label: 'Explore',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.add_circle_outline),
+            activeIcon: Icon(Icons.add_circle),
+            label: 'Share',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.people_outline),
+            activeIcon: Icon(Icons.people),
+            label: 'Community',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.mail_outline),
+            activeIcon: Icon(Icons.mail),
+            label: 'Messages',
+          ),
+        ],
       ),
-    );
+    ));
   }
 
-  Widget _buildNavItemWithLabel(
-      int index, IconData unselectedIcon, IconData selectedIcon, String label) {
-    bool isSelected = _selectedIndex == index;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => _onItemTapped(index),
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isSelected ? selectedIcon : unselectedIcon,
-                color: isSelected ? Colors.orange[600] : Colors.grey[500],
-                size: 24,
-              ),
-              SizedBox(height: 4),
-              Text(
-                label,
-                style: GoogleFonts.poppins(
-                  fontSize: 10,
-                  color: isSelected ? Colors.orange[600] : Colors.grey[500],
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
-  Widget _buildAddButton() {
-    bool isSelected = _selectedIndex == 2;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: () => _onItemTapped(2),
-        child: Container(
-          padding: EdgeInsets.all(8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.orange[600] : Colors.orange[400],
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.orange.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  Icons.add,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                "Share",
-                style: GoogleFonts.poppins(
-                  fontSize: 10,
-                  color: isSelected ? Colors.orange[600] : Colors.grey[500],
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap) {
     return ListTile(

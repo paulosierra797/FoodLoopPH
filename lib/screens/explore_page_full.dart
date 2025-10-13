@@ -529,14 +529,16 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
 
     return ClipRRect(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      child: Container(
-        width: width,
+      child: SizedBox(
+        width: width ?? double.infinity, // Fill available width if not specified
         height: height,
-        color: Colors.grey[200],
-        child: imageUrl != null && imageUrl.isNotEmpty
-            ? _buildNetworkImageWithFallback(
-                imageUrl, category, width ?? 300.0, height)
-            : _buildCategoryIcon(category),
+        child: Container(
+          color: Colors.grey[200],
+          child: imageUrl != null && imageUrl.isNotEmpty
+              ? _buildNetworkImageWithFallback(
+                  imageUrl, category, width ?? 300.0, height)
+              : _buildCategoryIcon(category),
+        ),
       ),
     );
   }
@@ -555,9 +557,9 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
 
       return Image.network(
         optimizedUrl,
-        width: width,
-        height: height,
-        fit: BoxFit.cover,
+        width: double.infinity, // Fill the container width
+        height: double.infinity, // Fill the container height
+        fit: BoxFit.cover, // Ensure image covers the entire container
         errorBuilder: (context, error, stackTrace) {
           debugPrint('Error loading image: $imageUrl - $error');
           return _buildCategoryIcon(category);
