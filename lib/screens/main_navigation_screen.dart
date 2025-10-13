@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/user_service_provider.dart';
 import '../providers/notifications_provider.dart';
 import '../services/database_notification_service.dart';
+import 'home_page.dart'; // Import to access tabNavigationProvider
 import 'home_page.dart';
 import 'explore_page_full.dart';
 import 'add_food_page.dart';
@@ -49,11 +50,22 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     setState(() {
       _selectedIndex = index;
     });
+    // Update the provider to keep it in sync
+    ref.read(tabNavigationProvider.notifier).updateTab(index);
   }
 
   @override
   Widget build(BuildContext context) {
     final userService = ref.watch(userServiceProvider);
+    
+    // Watch the tab navigation provider and update selectedIndex
+    ref.listen<int>(tabNavigationProvider, (previous, next) {
+      if (next >= 0 && next < _pages.length) {
+        setState(() {
+          _selectedIndex = next;
+        });
+      }
+    });
     return WillPopScope(
         onWillPop: () async {
           // If not on Home tab, go to Home instead of popping the route stack

@@ -712,7 +712,7 @@ class HomePage extends StatelessWidget {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Good morning, User",
+            Text("Good Day, User",
                 style: GoogleFonts.poppins(
                     fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
@@ -887,7 +887,7 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Good morning, User",
+              "Good Day, User",
               style: GoogleFonts.poppins(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,

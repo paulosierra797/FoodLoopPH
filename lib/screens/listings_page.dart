@@ -90,6 +90,8 @@ class ListingsPage extends ConsumerWidget {
     final category = _safeString(item['category']);
     final location = _safeString(item['location']);
     final quantity = _safeString(item['quantity']);
+    final measurement = _safeString(item['measurement']);
+    final displayQuantity = measurement.isNotEmpty ? '$quantity $measurement' : (quantity.isNotEmpty ? quantity : 'N/A');
     final status = _safeString(item['status']);
     final createdAt = _safeString(item['created_at']);
     
@@ -180,7 +182,7 @@ class ListingsPage extends ConsumerWidget {
                   children: [
                     _buildDetailChip(Icons.category, category, Colors.blue),
                     SizedBox(width: 8),
-                    _buildDetailChip(Icons.scale, quantity, Colors.green),
+                    _buildDetailChip(Icons.scale, displayQuantity, Colors.green),
                   ],
                 ),
                 
@@ -550,43 +552,302 @@ class ListingsPage extends ConsumerWidget {
     final titleController = TextEditingController(text: _safeString(item['title']));
     final descriptionController = TextEditingController(text: _safeString(item['description']));
     final quantityController = TextEditingController(text: _safeString(item['quantity']));
+    
+    final measurementOptions = [
+      'per piece',
+      'kg',
+      'grams',
+      'liters',
+      'ml',
+      'servings',
+      'portions',
+      'packs',
+      'boxes',
+    ];
+    
+    String selectedMeasurement = _safeString(item['measurement']);
+    if (!measurementOptions.contains(selectedMeasurement)) {
+      selectedMeasurement = 'per piece'; // Default to first option
+    }
 
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Edit Listing'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: InputDecoration(labelText: 'Title'),
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          elevation: 8,
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+              maxWidth: MediaQuery.of(context).size.width * 0.9,
+            ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white,
+                  Colors.grey[50]!,
+                ],
               ),
-              SizedBox(height: 8),
-              TextField(
-                controller: descriptionController,
-                decoration: InputDecoration(labelText: 'Description'),
-                maxLines: 2,
-              ),
-              SizedBox(height: 8),
-              TextField(
-                controller: quantityController,
-                decoration: InputDecoration(labelText: 'Quantity'),
-              ),
-            ],
+            ),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with icon
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange[100],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.edit,
+                        color: Colors.orange[700],
+                        size: 24,
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        'Edit Listing',
+                        style: GoogleFonts.poppins(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                
+                SizedBox(height: 20),
+                
+                // Form fields
+                _buildEnhancedTextField(
+                  controller: titleController,
+                  label: 'Title',
+                  icon: Icons.title,
+                  hint: 'Enter food title',
+                ),
+                
+                SizedBox(height: 16),
+                
+                _buildEnhancedTextField(
+                  controller: descriptionController,
+                  label: 'Description',
+                  icon: Icons.description,
+                  hint: 'Describe your food item',
+                  maxLines: 3,
+                ),
+                
+                SizedBox(height: 16),
+                
+                // Quantity and Measurement row - responsive layout
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxWidth < 350) {
+                      // Stack vertically on very small screens
+                      return Column(
+                        children: [
+                          _buildEnhancedTextField(
+                            controller: quantityController,
+                            label: 'Quantity',
+                            icon: Icons.numbers,
+                            hint: 'e.g., 5',
+                            keyboardType: TextInputType.number,
+                          ),
+                          SizedBox(height: 16),
+                          _buildEnhancedDropdown(
+                            value: selectedMeasurement,
+                            label: 'Measurement',
+                            icon: Icons.straighten,
+                            items: measurementOptions,
+                            onChanged: (String? newValue) {
+                              if (newValue != null) {
+                                setState(() {
+                                  selectedMeasurement = newValue;
+                                });
+                              }
+                            },
+                          ),
+                        ],
+                      );
+                    } else {
+                      // Side by side layout for larger screens
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: _buildEnhancedTextField(
+                              controller: quantityController,
+                              label: 'Quantity',
+                              icon: Icons.numbers,
+                              hint: 'e.g., 5',
+                              keyboardType: TextInputType.number,
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Expanded(
+                            flex: 3,
+                            child: _buildEnhancedDropdown(
+                              value: selectedMeasurement,
+                              label: 'Measurement',
+                              icon: Icons.straighten,
+                              items: measurementOptions,
+                              onChanged: (String? newValue) {
+                                if (newValue != null) {
+                                  setState(() {
+                                    selectedMeasurement = newValue;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                  },
+                ),
+                
+                SizedBox(height: 24),
+                
+                // Action buttons - responsive layout
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxWidth < 350) {
+                      // Stack vertically on very small screens
+                      return Column(
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            child: TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: BorderSide(color: Colors.grey[300]!),
+                                ),
+                              ),
+                              child: Text(
+                                'Cancel',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange[600],
+                                foregroundColor: Colors.white,
+                                elevation: 2,
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.save, size: 18),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Save Changes',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    } else {
+                      // Side by side layout for larger screens
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: BorderSide(color: Colors.grey[300]!),
+                                ),
+                              ),
+                              child: Text(
+                                'Cancel',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange[600],
+                                foregroundColor: Colors.white,
+                                elevation: 2,
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.save, size: 18),
+                                  SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      'Save Changes',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+            ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('Save'),
-          ),
-        ],
       ),
     );
 
@@ -598,6 +859,7 @@ class ListingsPage extends ConsumerWidget {
               'title': titleController.text.trim(),
               'description': descriptionController.text.trim(),
               'quantity': quantityController.text.trim(),
+              'measurement': selectedMeasurement,
             })
             .eq('id', item['id']);
         ref.invalidate(foodListingsProvider);
@@ -651,5 +913,118 @@ class ListingsPage extends ConsumerWidget {
         );
       }
     }
+  }
+
+  Widget _buildEnhancedTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required String hint,
+    int maxLines = 1,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 18, color: Colors.grey[600]),
+            SizedBox(width: 8),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          maxLines: maxLines,
+          decoration: InputDecoration(
+            hintText: hint,
+            filled: true,
+            fillColor: Colors.grey[50],
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.orange[400]!, width: 2),
+            ),
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+          style: GoogleFonts.poppins(fontSize: 14),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEnhancedDropdown({
+    required String value,
+    required String label,
+    required IconData icon,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 18, color: Colors.grey[600]),
+            SizedBox(width: 8),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: value,
+          onChanged: onChanged,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.grey[50],
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.orange[400]!, width: 2),
+            ),
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+          items: items.map((String item) {
+            return DropdownMenuItem<String>(
+              value: item,
+              child: Text(
+                item,
+                style: GoogleFonts.poppins(fontSize: 14),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
   }
 }

@@ -64,10 +64,45 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
   }
 
   // Create markers for food listings
-  void _createMarkers() {
+  void _createMarkers([List<Map<String, dynamic>>? filteredListings]) {
     final listingsAsync = ref.read(foodListingsProvider);
     listingsAsync.when(
       data: (listings) {
+        // Use filtered listings if provided, otherwise use all listings
+        final listingsToShow = filteredListings ?? listings;
+        
+        // Apply the same filtering logic as in the list view
+        final filtered = listingsToShow.where((listing) {
+          final title = (listing["title"] ?? '').toString().toLowerCase();
+          final description = (listing["description"] ?? '').toString().toLowerCase();
+          final category = (listing["category"] ?? 'Others').toString();
+          final matchesSearch = _searchQuery.isEmpty ||
+              title.contains(_searchQuery.toLowerCase()) ||
+              description.contains(_searchQuery.toLowerCase());
+          final matchesCategory = _selectedCategory == 'All' ||
+              category == _selectedCategory;
+          return matchesSearch && matchesCategory;
+        }).toList();
+        
+        // Sort to prioritize available products first, then claimed products
+        filtered.sort((a, b) {
+          final aStatus = (a["status"] ?? "claimed").toString().toLowerCase();
+          final bStatus = (b["status"] ?? "claimed").toString().toLowerCase();
+          
+          // Available products come first (available = 0, claimed = 1)
+          final aAvailable = aStatus == 'available' ? 0 : 1;
+          final bAvailable = bStatus == 'available' ? 0 : 1;
+          
+          if (aAvailable != bAvailable) {
+            return aAvailable.compareTo(bAvailable);
+          }
+          
+          // For same status, sort by creation date (newest first)
+          final aCreated = DateTime.tryParse(a["created_at"] ?? "") ?? DateTime.now();
+          final bCreated = DateTime.tryParse(b["created_at"] ?? "") ?? DateTime.now();
+          return bCreated.compareTo(aCreated);
+        });
+        
         Set<Marker> markers = {};
 
         // Add user location marker
@@ -84,9 +119,9 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
           ),
         );
 
-        // Add food listing markers
-        for (int i = 0; i < listings.length; i++) {
-          final listing = listings[i];
+        // Add food listing markers for filtered results
+        for (int i = 0; i < filtered.length; i++) {
+          final listing = filtered[i];
           final lat = listing['latitude'] ?? listing['lat'];
           final lng = listing['longitude'] ?? listing['lng'];
 
@@ -103,7 +138,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                 infoWindow: InfoWindow(
                   title: listing['title'] ?? 'Food Item',
                   snippet:
-                      '${listing['description'] ?? 'Food'} - ${listing['quantity'] ?? 'Available'}',
+                      '${listing['description'] ?? 'Food'} - ${(listing['quantity'] ?? 'N/A')} ${(listing['measurement'] ?? 'units')}',
                 ),
               ),
             );
@@ -126,25 +161,29 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
   // Get marker color based on food category
   Color _getMarkerColorForCategory(String category) {
     switch (category.toLowerCase()) {
-      case 'fast food':
-        return Colors.red;
-      case 'filipino':
+      case 'prepared food':
         return Colors.orange;
-      case 'bakery':
+      case 'fresh produce':
+        return Colors.green;
+      case 'packaged food':
+        return Colors.blue;
+      case 'baked goods':
         return Colors.brown;
-      case 'asian':
+      case 'beverages':
         return Colors.purple;
       default:
-        return Colors.green;
+        return Colors.grey;
     }
   }
 
   // Convert Color to Google Maps hue
   double _getHueForColor(Color color) {
-    if (color == Colors.red) return BitmapDescriptor.hueRed;
     if (color == Colors.orange) return BitmapDescriptor.hueOrange;
+    if (color == Colors.green) return BitmapDescriptor.hueGreen;
+    if (color == Colors.blue) return BitmapDescriptor.hueBlue;
     if (color == Colors.brown) return BitmapDescriptor.hueRose;
     if (color == Colors.purple) return BitmapDescriptor.hueViolet;
+    if (color == Colors.grey) return BitmapDescriptor.hueRed; // Use red hue for grey since there's no grey option
     return BitmapDescriptor.hueGreen;
   }
 
@@ -198,6 +237,10 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                         setState(() {
                           _searchQuery = value;
                         });
+                        // Update map markers when search changes and in map view
+                        if (!_isListView) {
+                          _createMarkers();
+                        }
                       },
                       decoration: InputDecoration(
                         hintText: "Search for food, restaurants...",
@@ -221,10 +264,12 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                           child: Row(
                             children: [
                               _buildCategoryChip('All'),
-                              _buildCategoryChip('Fast Food'),
-                              _buildCategoryChip('Filipino'),
-                              _buildCategoryChip('Bakery'),
-                              _buildCategoryChip('Others'),
+                              _buildCategoryChip('Prepared Food'),
+                              _buildCategoryChip('Fresh Produce'),
+                              _buildCategoryChip('Packaged Food'),
+                              _buildCategoryChip('Baked Goods'),
+                              _buildCategoryChip('Beverages'),
+                              _buildCategoryChip('Other'),
                             ],
                           ),
                         ),
@@ -253,20 +298,41 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
             Expanded(
               child: listingsAsync.when(
                 data: (listings) {
+                  // Filter listings based on search and category
                   final filtered = listings.where((listing) {
-                    final name =
-                        (listing["name"] ?? '').toString().toLowerCase();
-                    final food =
-                        (listing["food"] ?? '').toString().toLowerCase();
+                    final title =
+                        (listing["title"] ?? '').toString().toLowerCase();
+                    final description =
+                        (listing["description"] ?? '').toString().toLowerCase();
                     final category =
                         (listing["category"] ?? 'Others').toString();
                     final matchesSearch = _searchQuery.isEmpty ||
-                        name.contains(_searchQuery.toLowerCase()) ||
-                        food.contains(_searchQuery.toLowerCase());
+                        title.contains(_searchQuery.toLowerCase()) ||
+                        description.contains(_searchQuery.toLowerCase());
                     final matchesCategory = _selectedCategory == 'All' ||
                         category == _selectedCategory;
                     return matchesSearch && matchesCategory;
                   }).toList();
+                  
+                  // Sort to prioritize available products first, then claimed products
+                  filtered.sort((a, b) {
+                    final aStatus = (a["status"] ?? "claimed").toString().toLowerCase();
+                    final bStatus = (b["status"] ?? "claimed").toString().toLowerCase();
+                    
+                    // Available products come first (available = 0, claimed = 1)
+                    final aAvailable = aStatus == 'available' ? 0 : 1;
+                    final bAvailable = bStatus == 'available' ? 0 : 1;
+                    
+                    if (aAvailable != bAvailable) {
+                      return aAvailable.compareTo(bAvailable);
+                    }
+                    
+                    // For same status, sort by creation date (newest first)
+                    final aCreated = DateTime.tryParse(a["created_at"] ?? "") ?? DateTime.now();
+                    final bCreated = DateTime.tryParse(b["created_at"] ?? "") ?? DateTime.now();
+                    return bCreated.compareTo(aCreated);
+                  });
+                  
                   return _isListView
                       ? _buildListView(filtered)
                       : _buildMapView(filtered);
@@ -292,6 +358,10 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
           setState(() {
             _selectedCategory = category;
           });
+          // Update map markers when category changes and in map view
+          if (!_isListView) {
+            _createMarkers();
+          }
         },
         selectedColor: Colors.orange[100],
         checkmarkColor: Colors.orange[600],
@@ -420,11 +490,12 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                   ),
                 ),
                 SizedBox(height: 4),
-                _buildLegendItem('Fast Food', Colors.red),
-                _buildLegendItem('Filipino', Colors.orange),
-                _buildLegendItem('Bakery', Colors.brown),
-                _buildLegendItem('Asian', Colors.purple),
-                _buildLegendItem('Others', Colors.green),
+                _buildLegendItem('Prepared Food', Colors.orange),
+                _buildLegendItem('Fresh Produce', Colors.green),
+                _buildLegendItem('Packaged Food', Colors.blue),
+                _buildLegendItem('Baked Goods', Colors.brown),
+                _buildLegendItem('Beverages', Colors.purple),
+                _buildLegendItem('Other', Colors.grey),
               ],
             ),
           ),
@@ -472,6 +543,8 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     List<dynamic>? images = listing["images"] as List<dynamic>?;
     String food = (listing["description"] ?? "Unknown food").toString();
     String quantity = (listing["quantity"] ?? "N/A").toString();
+    String measurement = (listing["measurement"] ?? "units").toString();
+    String displayQuantity = "$quantity $measurement";
     String address = (listing["location"] ?? "No address").toString();
     String time = (listing["expiration_date"] ?? "Unknown time").toString();
     // No rating in your schema, so set to 0
@@ -483,11 +556,12 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     return Container(
       margin: EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: available ? Colors.white : Colors.grey[50],
         borderRadius: BorderRadius.circular(16),
+        border: available ? null : Border.all(color: Colors.grey[300]!, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withOpacity(available ? 0.1 : 0.05),
             blurRadius: 10,
             offset: Offset(0, 4),
           ),
@@ -496,11 +570,40 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image
-          _buildFoodImage(
-            images: images,
-            category: category,
-            height: 150,
+          // Image with opacity for claimed items
+          Stack(
+            children: [
+              _buildFoodImage(
+                images: images,
+                category: category,
+                height: 150,
+              ),
+              if (!available)
+                Container(
+                  height: 150,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.7),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                  ),
+                  child: Center(
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.red[600],
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'CLAIMED',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
 
           Padding(
@@ -517,7 +620,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                         style: GoogleFonts.poppins(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+                          color: available ? Colors.black87 : Colors.grey[600],
                         ),
                       ),
                     ),
@@ -547,13 +650,13 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                   food,
                   style: GoogleFonts.poppins(
                     fontSize: 14,
-                    color: Colors.orange[600],
+                    color: available ? Colors.orange[600] : Colors.grey[500],
                     fontWeight: FontWeight.w500,
                   ),
                 ),
 
                 Text(
-                  quantity,
+                  displayQuantity,
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     color: Colors.grey[600],
@@ -682,31 +785,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     );
   }
 
-  void _showLocationDetails(Map<String, dynamic> listing) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(listing["name"] ?? "Unknown Location"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Food: ${listing["food"] ?? "Not specified"}"),
-            SizedBox(height: 8),
-            Text("Address: ${listing["address"] ?? "Address not available"}"),
-            SizedBox(height: 8),
-            Text("Distance: ${listing["distance"] ?? "Unknown"}"),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("Close"),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   // Helper method to build food image with fallbacks
   Widget _buildFoodImage(

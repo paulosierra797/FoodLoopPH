@@ -2,15 +2,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/user_service_provider.dart';
 
-class ChangePasswordPage extends StatefulWidget {
+class ChangePasswordPage extends ConsumerStatefulWidget {
   const ChangePasswordPage({super.key});
 
   @override
-  _ChangePasswordPageState createState() => _ChangePasswordPageState();
+  ConsumerState<ChangePasswordPage> createState() => _ChangePasswordPageState();
 }
 
-class _ChangePasswordPageState extends State<ChangePasswordPage> {
+class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
   final _formKey = GlobalKey<FormState>();
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
@@ -155,13 +157,23 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
               color: Colors.amber[700],
               child: Row(
                 children: [
-                  Text(
-                    "Good morning, User",
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final userService = ref.watch(userServiceProvider);
+                      final user = userService.currentUser;
+                      final userName = user?.firstName.isNotEmpty == true 
+                        ? user!.firstName 
+                        : (user?.username ?? "User");
+                      
+                      return Text(
+                        "Good Day, $userName",
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      );
+                    },
                   ),
                   Spacer(),
                   Icon(Icons.notifications, color: Colors.black87, size: 24),

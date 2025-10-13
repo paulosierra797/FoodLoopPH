@@ -10,6 +10,7 @@ import 'dart:io';
 import '../providers/food_listings_provider.dart';
 import '../services/storage_service.dart';
 import 'main_navigation_screen.dart';
+import 'package:flutter/services.dart';
 
 class AddFoodPage extends ConsumerStatefulWidget {
   const AddFoodPage({super.key});
@@ -28,6 +29,7 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
 
   String _selectedCategory = 'Prepared Food';
   String _selectedExpiry = 'Today';
+  String _selectedMeasurement = 'per piece';
   bool _isUrgent = false;
   bool _isSubmitting = false;
   List<File> _selectedImages = [];
@@ -35,7 +37,6 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
 
   // Location variables
   LatLng? _selectedLocation;
-  String _locationStatus = 'Tap to set location';
   bool _isLoadingLocation = false;
 
   final List<String> _categories = [
@@ -55,11 +56,22 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
     'More than a week'
   ];
 
+  final List<String> _measurementOptions = [
+    'per piece',
+    'kg',
+    'grams',
+    'liters',
+    'ml',
+    'servings',
+    'portions',
+    'packs',
+    'boxes',
+  ];
+
   // Get current location
   Future<void> _getCurrentLocation() async {
     setState(() {
       _isLoadingLocation = true;
-      _locationStatus = 'Getting location...';
     });
 
     try {
@@ -73,18 +85,15 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
         Position position = await Geolocator.getCurrentPosition();
         setState(() {
           _selectedLocation = LatLng(position.latitude, position.longitude);
-          _locationStatus = 'Location set automatically';
           _isLoadingLocation = false;
         });
       } else {
         setState(() {
-          _locationStatus = 'Location permission denied';
           _isLoadingLocation = false;
         });
       }
     } catch (e) {
       setState(() {
-        _locationStatus = 'Failed to get location';
         _isLoadingLocation = false;
       });
     }
@@ -173,7 +182,6 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
               if (lat != null && lng != null) {
                 setState(() {
                   _selectedLocation = LatLng(lat, lng);
-                  _locationStatus = 'Location set manually';
                 });
                 Navigator.pop(context);
               } else {
@@ -343,12 +351,32 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
                               // Stacked layout for smaller screens
                               return Column(
                                 children: [
-                                  _buildTextField(
-                                    controller: _quantityController,
-                                    label: 'Quantity',
-                                    hint: 'e.g., 10 servings, 5 kg',
-                                    icon: Icons.scale,
-                                    required: true,
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _buildTextField(
+                                          controller: _quantityController,
+                                          label: 'Quantity',
+                                          hint: 'e.g., 10',
+                                          icon: Icons.scale,
+                                          keyboardType: TextInputType.number,
+                                          required: true,
+                                          inputFormatters: [
+                                            FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                                          ],
+                                        ),
+                                      ),
+                                      SizedBox(width: 16),
+                                      Expanded(
+                                        child: _buildDropdownField(
+                                          value: _selectedMeasurement,
+                                          label: 'Measurement',
+                                          items: _measurementOptions,
+                                          icon: Icons.straighten,
+                                          onChanged: (value) => setState(() => _selectedMeasurement = value!),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   SizedBox(height: 16),
                                   _buildDropdownField(
@@ -369,9 +397,23 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
                                     child: _buildTextField(
                                       controller: _quantityController,
                                       label: 'Quantity',
-                                      hint: 'e.g., 10 servings, 5 kg',
+                                      hint: 'e.g., 10',
                                       icon: Icons.scale,
+                                      keyboardType: TextInputType.number,
                                       required: true,
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                                      ],
+                                    ),
+                                  ),
+                                  SizedBox(width: 16),
+                                  Expanded(
+                                    child: _buildDropdownField(
+                                      value: _selectedMeasurement,
+                                      label: 'Measurement',
+                                      items: _measurementOptions,
+                                      icon: Icons.straighten,
+                                      onChanged: (value) => setState(() => _selectedMeasurement = value!),
                                     ),
                                   ),
                                   SizedBox(width: 16),
@@ -509,10 +551,23 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
                         _buildTextField(
                           controller: _contactController,
                           label: 'Contact Number',
-                          hint: '+63 9XX XXX XXXX',
+                          hint: 'ex. 09123456789',
                           icon: Icons.phone,
                           keyboardType: TextInputType.phone,
                           required: true,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(11),
+                          ],
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'This field is required';
+                            }
+                            if (value.length != 11) {
+                              return 'Contact number must be exactly 11 digits';
+                            }
+                            return null;
+                          },
                         ),
 
                         SizedBox(height: 16),
@@ -839,6 +894,8 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
     bool required = false,
     int maxLines = 1,
     TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
+    String? Function(String?)? validator,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -868,14 +925,8 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
           controller: controller,
           keyboardType: keyboardType,
           maxLines: maxLines,
-          validator: required
-              ? (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'This field is required';
-                  }
-                  return null;
-                }
-              : null,
+          inputFormatters: inputFormatters,
+          validator: validator,
           decoration: InputDecoration(
             hintText: hint,
             prefixIcon: Icon(icon, color: Colors.grey[600]),
@@ -1028,6 +1079,7 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
         'category': _selectedCategory,
         'location': _addressController.text.trim(),
         'quantity': _quantityController.text.trim(),
+        'measurement': _selectedMeasurement,
         'posted_by': user.id,
         'status': 'available',
         'expiration_date': _mapExpiryToDate(_selectedExpiry),
@@ -1260,6 +1312,7 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
     setState(() {
       _selectedCategory = 'Prepared Food';
       _selectedExpiry = 'Today';
+      _selectedMeasurement = 'per piece';
       _isUrgent = false;
       _isSubmitting = false;
       _selectedImages.clear();

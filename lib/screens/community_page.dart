@@ -225,6 +225,14 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
     }
   }
 
+  // Filter posts based on selected category
+  List<CommunityPost> _getFilteredPosts() {
+    if (selectedCategory == 'All') {
+      return posts;
+    }
+    return posts.where((post) => post.category == selectedCategory).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -392,9 +400,9 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
           Expanded(
             child: ListView.builder(
               padding: EdgeInsets.symmetric(horizontal: 12),
-              itemCount: posts.length,
+              itemCount: _getFilteredPosts().length,
               itemBuilder: (context, index) {
-                return _buildFacebookStylePost(posts[index]);
+                return _buildFacebookStylePost(_getFilteredPosts()[index]);
               },
             ),
           ),

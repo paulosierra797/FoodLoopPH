@@ -6,7 +6,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/user_service_provider.dart';
 import '../providers/food_listings_provider.dart';
 import '../providers/dashboard_metrics_provider.dart';
-import 'explore_page_full.dart';
+
+// Provider for managing tab navigation
+final tabNavigationProvider = StateNotifierProvider<TabNavigationNotifier, int>((ref) {
+  return TabNavigationNotifier();
+});
+
+class TabNavigationNotifier extends StateNotifier<int> {
+  TabNavigationNotifier() : super(0);
+  
+  void changeTab(int index) {
+    // Always trigger a change, even if it's the same index
+    if (state == index) {
+      // Force a temporary change to trigger listeners
+      state = -1;
+    }
+    state = index;
+  }
+  
+  void updateTab(int index) {
+    // Direct update without forcing change logic
+    state = index;
+  }
+}
 
 String _getTimeAgo(DateTime date) {
   final now = DateTime.now();
@@ -42,7 +64,7 @@ class HomePage extends ConsumerWidget {
             child: Row(
               children: [
                 Text(
-                  "Good morning, ${userService.currentUser?.firstName ?? "User"}",
+                  "Good Day, ${userService.currentUser?.firstName ?? "User"}",
                   style: GoogleFonts.poppins(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -158,11 +180,8 @@ class HomePage extends ConsumerWidget {
                       Spacer(),
                       GestureDetector(
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => ExplorePage()),
-                          );
+                          // Switch to Explore tab (index 1) using the provider
+                          ref.read(tabNavigationProvider.notifier).changeTab(1);
                         },
                         child: Text(
                           "See All",
@@ -194,7 +213,7 @@ class HomePage extends ConsumerWidget {
                           itemCount: featured.length,
                           itemBuilder: (context, index) {
                             final item = featured[index];
-                            return _buildFeaturedListingCard(item);
+                            return _buildFeaturedListingCard(context, item);
                           },
                         );
                       },
@@ -261,7 +280,7 @@ class HomePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildFeaturedListingCard(Map<String, dynamic> item) {
+  Widget _buildFeaturedListingCard(BuildContext context, Map<String, dynamic> item) {
     // Map Supabase fields to card fields
     final title = (item['title'] ?? 'No Title').toString();
     final description = (item['description'] ?? '').toString();
@@ -380,20 +399,104 @@ class HomePage extends ConsumerWidget {
               ],
             ),
           ),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.orange[50],
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              status.isNotEmpty ? status : "Available",
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: Colors.orange[600],
-                fontWeight: FontWeight.w500,
+          Column(
+            children: [
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  status.isNotEmpty ? status : "available",
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.orange[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
-            ),
+              SizedBox(height: 8),
+              if (status.toLowerCase() == 'available' || status.isEmpty)
+                SizedBox(
+                  width: 80,
+                  height: 32,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange[600],
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 2,
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    ),
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text(
+                              'Claim Food Item',
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            content: Text(
+                              'Are you sure you want to claim "${item['title'] ?? 'this item'}"?',
+                              style: GoogleFonts.poppins(),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                                child: Text(
+                                  'Cancel',
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange[600],
+                                  foregroundColor: Colors.white,
+                                ),
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Item claimed successfully!',
+                                        style: GoogleFonts.poppins(),
+                                      ),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  'Claim',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                    child: Text(
+                      "Claim",
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
       ),

@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/user_service_provider.dart';
+import 'package:flutter/services.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -185,6 +186,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Widget build(BuildContext context) {
     final userService = ref.watch(userServiceProvider);
     final user = userService.currentUser;
+
     return Scaffold(
       backgroundColor: Colors.amber[700],
       body: SafeArea(
@@ -197,7 +199,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               child: Row(
                 children: [
                   Text(
-                    "Good morning, User",
+                    user != null
+                      ? "Good Day, ${user.firstName.isNotEmpty ? user.firstName : user.username}"
+                      : "Good Day, User",
                     style: GoogleFonts.poppins(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -219,7 +223,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     topRight: Radius.circular(24),
                   ),
                 ),
-                child: Padding(
+                child: SingleChildScrollView(
                   padding: EdgeInsets.all(24),
                   child: Column(
                     children: [
@@ -229,27 +233,46 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           GestureDetector(
                             onTap: () => Navigator.pop(context),
                             child: Container(
-                              padding: EdgeInsets.all(8),
+                              padding: EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 color: Colors.grey[100],
-                                shape: BoxShape.circle,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 4,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                              child: Icon(Icons.arrow_back, size: 20),
+                              child: Icon(Icons.arrow_back, size: 20, color: Colors.grey[700]),
                             ),
                           ),
                           Spacer(),
                           Stack(
                             children: [
-                              CircleAvatar(
-                                radius: 30,
-                                backgroundColor: Colors.grey[300],
-                                backgroundImage: _profileImage != null
-                                    ? FileImage(_profileImage!)
-                                    : null,
-                                child: _profileImage == null
-                                    ? Icon(Icons.person,
-                                        size: 35, color: Colors.grey[600])
-                                    : null,
+                              Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 8,
+                                      offset: Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: CircleAvatar(
+                                  radius: 35,
+                                  backgroundColor: Colors.grey[300],
+                                  backgroundImage: _profileImage != null
+                                      ? FileImage(_profileImage!)
+                                      : null,
+                                  child: _profileImage == null
+                                      ? Icon(Icons.person,
+                                          size: 40, color: Colors.grey[600])
+                                      : null,
+                                ),
                               ),
                               Positioned(
                                 bottom: 0,
@@ -257,234 +280,70 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                 child: GestureDetector(
                                   onTap: _pickImage,
                                   child: Container(
-                                    padding: EdgeInsets.all(4),
+                                    padding: EdgeInsets.all(8),
                                     decoration: BoxDecoration(
                                       color: Colors.amber[700],
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                          color: Colors.white, width: 2),
+                                          color: Colors.white, width: 3),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.2),
+                                          blurRadius: 4,
+                                          offset: Offset(0, 2),
+                                        ),
+                                      ],
                                     ),
-                                    child: Icon(Icons.edit,
-                                        size: 12, color: Colors.white),
+                                    child: Icon(Icons.camera_alt,
+                                        size: 16, color: Colors.white),
                                   ),
                                 ),
                               ),
                             ],
                           ),
                           Spacer(),
-                          Container(width: 36), // Balance the row
+                          Container(width: 48), // Balance the row
                         ],
                       ),
                       SizedBox(height: 24),
-                      // Title
-                      Text(
-                        "Edit Profile",
-                        style: GoogleFonts.poppins(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
+                      // Title and subtitle
+                      Column(
+                        children: [
+                          Text(
+                            "Edit Profile",
+                            style: GoogleFonts.poppins(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            "Update your personal information",
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
                       ),
                       SizedBox(height: 32),
                       // Form
-                      Expanded(
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildTextField(
-                                  "First Name", _firstNameController),
-                              SizedBox(height: 16),
-                              _buildTextField("Last Name", _lastNameController),
-                              SizedBox(height: 16),
-                              _buildUsernameField(),
-                              SizedBox(height: 16),
-                              _buildTextField("Email", _emailController,
-                                  enabled: false,
-                                  helperText: "Email cannot be changed"),
-                              SizedBox(height: 16),
-                              _buildTextField("Phone Number", _phoneController),
-                              SizedBox(height: 16),
-                              // Birth and Sex row
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          "Birth",
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                            color: Colors.black87,
-                                          ),
-                                        ),
-                                        SizedBox(height: 8),
-                                        GestureDetector(
-                                          onTap: _selectDate,
-                                          child: Container(
-                                            padding: EdgeInsets.symmetric(
-                                                horizontal: 16, vertical: 12),
-                                            decoration: BoxDecoration(
-                                              border: Border.all(
-                                                  color: Colors.grey[300]!),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              color: Colors.white,
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    _birthController
-                                                            .text.isEmpty
-                                                        ? "Select date"
-                                                        : _birthController.text,
-                                                    style: GoogleFonts.poppins(
-                                                      fontSize: 14,
-                                                      color: _birthController
-                                                              .text.isEmpty
-                                                          ? Colors.grey[500]
-                                                          : Colors.black87,
-                                                    ),
-                                                  ),
-                                                ),
-                                                Icon(Icons.calendar_today,
-                                                    size: 18,
-                                                    color: Colors.grey[500]),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          "Sex",
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                            color: Colors.black87,
-                                          ),
-                                        ),
-                                        SizedBox(height: 8),
-                                        Container(
-                                          padding: EdgeInsets.symmetric(
-                                              horizontal: 16),
-                                          decoration: BoxDecoration(
-                                            border: Border.all(
-                                                color: Colors.grey[300]!),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            color: Colors.white,
-                                          ),
-                                          child: DropdownButtonHideUnderline(
-                                            child: DropdownButton<String>(
-                                              value: _selectedGender,
-                                              isExpanded: true,
-                                              icon: Icon(
-                                                  Icons.keyboard_arrow_down,
-                                                  color: Colors.grey[500]),
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 14,
-                                                color: Colors.black87,
-                                              ),
-                                              items: ['Male', 'Female']
-                                                  .map((String value) {
-                                                return DropdownMenuItem<String>(
-                                                  value: value,
-                                                  child: Text(value),
-                                                );
-                                              }).toList(),
-                                              onChanged: (String? newValue) {
-                                                setState(() {
-                                                  _selectedGender = newValue!;
-                                                });
-                                              },
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Spacer(),
-                              // Save button
-                              SizedBox(
-                                width: double.infinity,
-                                height: 50,
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.amber[700],
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(25),
-                                    ),
-                                    elevation: 0,
-                                  ),
-                                  onPressed: () async {
-                                    if (_formKey.currentState!.validate()) {
-                                      final confirmed = await showDialog<bool>(
-                                        context: context,
-                                        builder: (context) => AlertDialog(
-                                          title: Text('Confirm Update'),
-                                          content: Text('Are you sure you want to update your profile information?'),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () => Navigator.pop(context, false),
-                                              child: Text('Cancel'),
-                                            ),
-                                            TextButton(
-                                              onPressed: () => Navigator.pop(context, true),
-                                              style: TextButton.styleFrom(foregroundColor: Colors.amber[700]),
-                                              child: Text('Update'),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                      if (confirmed == true) {
-                                        await ref.read(userServiceProvider).updateUserProfile(
-                                          firstName: _firstNameController.text.trim(),
-                                          lastName: _lastNameController.text.trim(),
-                                          username: _usernameController.text.trim(),
-                                          email: _emailController.text.trim(),
-                                          phoneNumber: _phoneController.text.trim(),
-                                          birthDate: _birthController.text.trim(),
-                                          gender: _selectedGender,
-                                        );
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                                'Profile updated successfully!'),
-                                            backgroundColor: Colors.green,
-                                          ),
-                                        );
-                                        Navigator.pop(context);
-                                      }
-                                    }
-                                  },
-                                  child: Text(
-                                    "Save Changes",
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                      Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildTextField("First Name", _firstNameController),
+                            _buildTextField("Last Name", _lastNameController),
+                            _buildUsernameField(),
+                            _buildTextField("Email", _emailController, enabled: false),
+                            _buildPhoneNumberField(),
+                            _buildBirthDateField(context),
+                            _buildGenderDropdown(),
+                            SizedBox(height: 24),
+                            _buildSaveButton(context),
+                          ],
                         ),
                       ),
                     ],
@@ -605,6 +464,231 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           },
         ),
       ],
+    );
+  }
+
+  Widget _buildPhoneNumberField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Phone Number",
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
+        ),
+        SizedBox(height: 8),
+        TextFormField(
+          controller: _phoneController,
+          keyboardType: TextInputType.phone,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(11),
+          ],
+          decoration: InputDecoration(
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: Colors.amber[700]!, width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: Colors.red, width: 2),
+            ),
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            filled: true,
+            fillColor: Colors.white,
+          ),
+          style: GoogleFonts.poppins(fontSize: 14),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return "Contact number is required";
+            }
+            if (value.length != 11 || !value.startsWith("09")) {
+              return "Contact number must be 11 digits and start with '09'";
+            }
+            return null;
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBirthDateField(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Birth Date",
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
+        ),
+        SizedBox(height: 8),
+        GestureDetector(
+          onTap: () => _selectDate(),
+          child: AbsorbPointer(
+            child: TextFormField(
+              controller: _birthController,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.amber[700]!, width: 2),
+                ),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                filled: true,
+                fillColor: Colors.white,
+                hintText: "Select your birth date",
+                hintStyle: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.grey[500],
+                ),
+              ),
+              style: GoogleFonts.poppins(fontSize: 14),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return "Birth date is required";
+                }
+                return null;
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGenderDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Gender",
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
+        ),
+        SizedBox(height: 8),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey[300]!),
+            borderRadius: BorderRadius.circular(8),
+            color: Colors.white,
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedGender,
+              isExpanded: true,
+              icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey[500]),
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.black87,
+              ),
+              items: ['Male', 'Female']
+                  .map((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  _selectedGender = newValue!;
+                });
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSaveButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.amber[700],
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
+          ),
+          elevation: 0,
+        ),
+        onPressed: () async {
+          if (_formKey.currentState!.validate()) {
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Text('Confirm Update'),
+                content: Text('Are you sure you want to update your profile information?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    style: TextButton.styleFrom(foregroundColor: Colors.amber[700]),
+                    child: Text('Update'),
+                  ),
+                ],
+              ),
+            );
+            if (confirmed == true) {
+              await ref.read(userServiceProvider).updateUserProfile(
+                firstName: _firstNameController.text.trim(),
+                lastName: _lastNameController.text.trim(),
+                username: _usernameController.text.trim(),
+                email: _emailController.text.trim(),
+                phoneNumber: _phoneController.text.trim(),
+                birthDate: _birthController.text.trim(),
+                gender: _selectedGender,
+              );
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(
+                SnackBar(
+                  content: Text(
+                      'Profile updated successfully!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+              Navigator.pop(context);
+            }
+          }
+        },
+        child: Text(
+          "Save Changes",
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
     );
   }
 }

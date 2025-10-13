@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../services/user_service.dart';
 import 'add_food_page.dart';
-import 'explore_page.dart';
+import 'explore_page_full.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -52,7 +52,7 @@ class _HomePageState extends State<HomePage> {
                     final userName =
                         userService.currentUser?.firstName ?? "User";
                     return Text(
-                      "Good morning, $userName",
+                      "Good Day, $userName",
                       style: GoogleFonts.poppins(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,

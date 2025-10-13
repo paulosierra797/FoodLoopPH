@@ -1,12 +1,14 @@
 // AboutPage widget
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/user_service_provider.dart';
 
-class AboutPage extends StatelessWidget {
+class AboutPage extends ConsumerWidget {
   const AboutPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: Colors.amber[700],
       body: SafeArea(
@@ -18,13 +20,23 @@ class AboutPage extends StatelessWidget {
               color: Colors.amber[700],
               child: Row(
                 children: [
-                  Text(
-                    "Good morning, User",
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final userService = ref.watch(userServiceProvider);
+                      final user = userService.currentUser;
+                      final userName = user?.firstName.isNotEmpty == true 
+                        ? user!.firstName 
+                        : (user?.username ?? "User");
+                      
+                      return Text(
+                        "Good Day, $userName",
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      );
+                    },
                   ),
                   Spacer(),
                   Icon(Icons.notifications, color: Colors.black87, size: 24),
