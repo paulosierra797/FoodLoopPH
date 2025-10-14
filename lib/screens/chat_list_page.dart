@@ -172,24 +172,26 @@ class _ChatListPageState extends State<ChatListPage> {
           }
         }
 
-        // Fetch usernames for each conversation partner
+        // Fetch usernames and profile pictures for each conversation partner
         for (String userId in conversationsMap.keys) {
           try {
             final userResponse = await _supabase
                 .from('users')
-                .select('first_name, last_name, email')
+                .select('first_name, last_name, email, profile_picture')
                 .eq('id', userId)
                 .maybeSingle();
 
             if (userResponse != null) {
               final firstName = userResponse['first_name'] ?? '';
               final lastName = userResponse['last_name'] ?? '';
+              final profilePicture = userResponse['profile_picture']?.toString();
               String userName = '$firstName $lastName'.trim();
               if (userName.isEmpty) {
                 userName =
                     userResponse['email']?.toString().split('@')[0] ?? 'User';
               }
               conversationsMap[userId]!['other_user_name'] = userName;
+              conversationsMap[userId]!['profile_picture'] = profilePicture;
             }
           } catch (e) {
             debugPrint('Error fetching user info for $userId: $e');
@@ -353,13 +355,18 @@ class _ChatListPageState extends State<ChatListPage> {
         leading: CircleAvatar(
           radius: 24,
           backgroundColor: Colors.amber[100],
-          child: Text(
-            otherUserName.isNotEmpty ? otherUserName[0].toUpperCase() : 'U',
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w600,
-              color: Colors.amber[800],
-            ),
-          ),
+          backgroundImage: conversation['profile_picture'] != null 
+              ? NetworkImage(conversation['profile_picture']) 
+              : null,
+          child: conversation['profile_picture'] == null
+              ? Text(
+                  otherUserName.isNotEmpty ? otherUserName[0].toUpperCase() : 'U',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.amber[800],
+                  ),
+                )
+              : null,
         ),
         title: Row(
           children: [
