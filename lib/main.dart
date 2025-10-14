@@ -1307,7 +1307,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     ListTile(
                       leading: Icon(Icons.star),
-                      title: Text("My Watchlist"),
+                      title: Text("My Claimed Foods"),
                       onTap: () {
                         Navigator.push(
                           context,
@@ -1508,7 +1508,7 @@ class WatchlistPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("My Watchlist")),
+      appBar: AppBar(title: Text("My Claimed Foods")),
       body:
           Center(child: Text("Watchlist Page", style: TextStyle(fontSize: 24))),
     );

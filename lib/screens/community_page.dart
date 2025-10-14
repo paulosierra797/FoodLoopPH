@@ -26,27 +26,29 @@ class PostComment {
 // Post model to store post data
 class CommunityPost {
   final String id;
+  final String userId; // Add user_id to identify post owner
   final String author;
   final String authorAvatar;
   final String category;
   final String content;
   final List<String>? imagePaths;
   final DateTime timestamp;
-  final Map<String, int> reactions;
+  int likesCount; // Simple likes count
   final List<PostComment> comments;
-  String? userReaction;
+  bool isLikedByUser; // Whether current user liked this post
 
   CommunityPost({
     required this.id,
+    required this.userId,
     required this.author,
     required this.authorAvatar,
     required this.category,
     required this.content,
     this.imagePaths,
     required this.timestamp,
-    required this.reactions,
+    required this.likesCount,
     required this.comments,
-    this.userReaction,
+    this.isLikedByUser = false,
   });
 }
 
@@ -120,6 +122,8 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
 
   Future<void> _fetchPosts() async {
     try {
+      final currentUser = supabase.auth.currentUser;
+      
       final response = await supabase
           .from('community_posts')
           .select('*, comments(*)') // Fetch posts along with their comments
@@ -159,16 +163,34 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
           ));
         }
 
+        // Fetch likes count for this post
+        final likesResponse = await supabase
+            .from('post_likes')
+            .select('user_id')
+            .eq('post_id', data['id']);
+        
+        final likesCount = (likesResponse as List).length;
+        
+        // Check if current user liked this post
+        bool isLikedByUser = false;
+        if (currentUser != null) {
+          isLikedByUser = (likesResponse as List).any(
+            (like) => like['user_id'] == currentUser.id
+          );
+        }
+
         fetchedPosts.add(CommunityPost(
           id: data['id'],
+          userId: userId, // Store the user_id for authorization checks
           author: postAuthorName,
           authorAvatar: data['author_avatar'] ?? '👤',
           category: data['category'],
           content: data['content'],
           imagePaths: (data['images'] as List<dynamic>?)?.cast<String>(),
           timestamp: DateTime.parse(data['timestamp']),
-          reactions: Map<String, int>.from(data['reactions'] ?? {}),
+          likesCount: likesCount,
           comments: processedComments,
+          isLikedByUser: isLikedByUser,
         ));
       }
 
@@ -197,7 +219,6 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
         'content': content,
         'images': imagePaths,
         'timestamp': DateTime.now().toIso8601String(),
-        'reactions': {},
       });
       _fetchPosts();
     } catch (e) {
@@ -222,6 +243,113 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
       _fetchPosts(); // Refresh posts to include new comments
     } catch (e) {
       print('Error adding comment: $e');
+    }
+  }
+
+  // Check if the current user is the post author
+  bool _isCurrentUserPost(CommunityPost post) {
+    final user = supabase.auth.currentUser;
+    return user != null && user.id == post.userId;
+  }
+
+  // Show edit post dialog
+  void _showEditPostDialog(CommunityPost post) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => EditPostBottomSheet(
+        post: post,
+        onPostEdited: (content, category) {
+          _editPost(post.id, content, category);
+        },
+      ),
+    );
+  }
+
+  // Edit post in database
+  Future<void> _editPost(String postId, String content, String category) async {
+    try {
+      await supabase.from('community_posts').update({
+        'content': content,
+        'category': category,
+      }).eq('id', postId);
+      _fetchPosts();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Post updated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error editing post: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update post'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // Show delete confirmation dialog
+  void _showDeleteConfirmDialog(CommunityPost post) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Delete Post',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Are you sure you want to delete this post? This action cannot be undone.',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deletePost(post.id);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text('Delete', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Delete post from database
+  Future<void> _deletePost(String postId) async {
+    try {
+      await supabase.from('community_posts').delete().eq('id', postId);
+      _fetchPosts();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Post deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error deleting post: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete post'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -486,14 +614,40 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
                     ],
                   ),
                 ),
-                PopupMenuButton(
-                  icon: Icon(Icons.more_horiz, color: Colors.grey[600]),
-                  itemBuilder: (context) => [
-                    PopupMenuItem(child: Text('Edit Post')),
-                    PopupMenuItem(child: Text('Delete Post')),
-                    PopupMenuItem(child: Text('Hide Post')),
-                  ],
-                ),
+                // Only show menu if current user is the post author
+                if (_isCurrentUserPost(post))
+                  PopupMenuButton(
+                    icon: Icon(Icons.more_horiz, color: Colors.grey[600]),
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit, size: 18, color: Colors.grey[700]),
+                            SizedBox(width: 8),
+                            Text('Edit Post'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, size: 18, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text('Delete Post', style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
+                      ),
+                    ],
+                    onSelected: (value) {
+                      if (value == 'edit') {
+                        _showEditPostDialog(post);
+                      } else if (value == 'delete') {
+                        _showDeleteConfirmDialog(post);
+                      }
+                    },
+                  ),
               ],
             ),
           ),
@@ -577,28 +731,23 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
 
           SizedBox(height: 12),
 
-          // Reaction Summary
-          if (post.reactions.isNotEmpty)
+          // Likes and Comments Summary
+          if (post.likesCount > 0 || post.comments.isNotEmpty)
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  // Reaction Icons
-                  ...post.reactions.entries.take(3).map(
-                        (entry) => Container(
-                          margin: EdgeInsets.only(right: 2),
-                          child:
-                              Text(entry.key, style: TextStyle(fontSize: 16)),
-                        ),
+                  if (post.likesCount > 0) ...[
+                    Icon(Icons.thumb_up, size: 16, color: Colors.orange[600]),
+                    SizedBox(width: 4),
+                    Text(
+                      '${post.likesCount}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: Colors.grey[600],
                       ),
-                  SizedBox(width: 6),
-                  Text(
-                    '${post.reactions.values.reduce((a, b) => a + b)}',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      color: Colors.grey[600],
                     ),
-                  ),
+                  ],
                   Spacer(),
                   if (post.comments.isNotEmpty)
                     Text(
@@ -615,12 +764,12 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
           SizedBox(height: 8),
           Divider(height: 1, color: Colors.grey[200]),
 
-          // Action Buttons with Hover Reactions
+          // Action Buttons
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Row(
               children: [
-                Expanded(child: _buildReactionButton(post)),
+                Expanded(child: _buildLikeButton(post)),
                 Expanded(child: _buildCommentButton(post)),
               ],
             ),
@@ -688,45 +837,31 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
     );
   }
 
-  // Facebook-style reaction button with hover effect
-  Widget _buildReactionButton(CommunityPost post) {
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          MouseRegion(
-            onEnter: (_) => _showReactionPicker(post),
-            child: GestureDetector(
-              onLongPress: () => _showReactionPicker(post),
-              onTap: () => _handleReaction(post, '👍'),
-              child: Row(
-                children: [
-                  Icon(
-                    post.userReaction != null
-                        ? Icons.thumb_up
-                        : Icons.thumb_up_outlined,
-                    size: 18,
-                    color: post.userReaction != null
-                        ? Colors.orange[600]
-                        : Colors.grey[600],
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    post.userReaction ?? 'Like',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      color: post.userReaction != null
-                          ? Colors.orange[600]
-                          : Colors.grey[600],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+  // Simple like button
+  Widget _buildLikeButton(CommunityPost post) {
+    return GestureDetector(
+      onTap: () => _toggleLike(post),
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              post.isLikedByUser ? Icons.thumb_up : Icons.thumb_up_outlined,
+              size: 18,
+              color: post.isLikedByUser ? Colors.orange[600] : Colors.grey[600],
+            ),
+            SizedBox(width: 6),
+            Text(
+              'Like',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: post.isLikedByUser ? Colors.orange[600] : Colors.grey[600],
+                fontWeight: FontWeight.w500,
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -836,61 +971,6 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
     );
   }
 
-  void _showReactionPicker(CommunityPost post) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(25),
-            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10)],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: ['👍', '❤️', '😂', '😮', '😢', '😡']
-                .map(
-                  (emoji) => GestureDetector(
-                    onTap: () {
-                      _handleReaction(post, emoji);
-                      Navigator.pop(context);
-                    },
-                    child: Container(
-                      padding: EdgeInsets.all(8),
-                      child: Text(emoji, style: TextStyle(fontSize: 20)),
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _handleReaction(CommunityPost post, String reaction) {
-    setState(() {
-      if (post.userReaction == reaction) {
-        post.userReaction = null;
-        if (post.reactions[reaction] != null && post.reactions[reaction]! > 0) {
-          post.reactions[reaction] = post.reactions[reaction]! - 1;
-        }
-      } else {
-        if (post.userReaction != null) {
-          if (post.reactions[post.userReaction!] != null &&
-              post.reactions[post.userReaction!]! > 0) {
-            post.reactions[post.userReaction!] =
-                post.reactions[post.userReaction!]! - 1;
-          }
-        }
-        post.userReaction = reaction;
-        post.reactions[reaction] = (post.reactions[reaction] ?? 0) + 1;
-      }
-    });
-  }
-
   void _showCommentDialog(CommunityPost post) {
     final commentController = TextEditingController();
     showModalBottomSheet(
@@ -956,6 +1036,67 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
         ),
       ),
     );
+  }
+
+  // Toggle like/unlike with database persistence
+  Future<void> _toggleLike(CommunityPost post) async {
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      print('Error: No authenticated user found.');
+      return;
+    }
+
+    // Optimistic UI update
+    setState(() {
+      if (post.isLikedByUser) {
+        post.isLikedByUser = false;
+        post.likesCount--;
+      } else {
+        post.isLikedByUser = true;
+        post.likesCount++;
+      }
+    });
+
+    try {
+      if (post.isLikedByUser) {
+        // Insert like into database
+        await supabase.from('post_likes').insert({
+          'post_id': post.id,
+          'user_id': user.id,
+        });
+        debugPrint('✅ Like added for post ${post.id}');
+      } else {
+        // Remove like from database
+        await supabase
+            .from('post_likes')
+            .delete()
+            .eq('post_id', post.id)
+            .eq('user_id', user.id);
+        debugPrint('✅ Like removed for post ${post.id}');
+      }
+    } catch (e) {
+      print('❌ Error toggling like: $e');
+      // Revert UI update if database operation failed
+      setState(() {
+        if (post.isLikedByUser) {
+          post.isLikedByUser = false;
+          post.likesCount--;
+        } else {
+          post.isLikedByUser = true;
+          post.likesCount++;
+        }
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update like. Please try again.'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 
   void _showAllComments(CommunityPost post) {
@@ -1172,6 +1313,184 @@ class _CreatePostBottomSheetState extends State<CreatePostBottomSheet> {
       SnackBar(
         content: Text('Image selected! (Simulated)'),
         duration: Duration(seconds: 2),
+      ),
+    );
+  }
+}
+
+// Edit Post Bottom Sheet
+class EditPostBottomSheet extends StatefulWidget {
+  final CommunityPost post;
+  final Function(String content, String category) onPostEdited;
+
+  const EditPostBottomSheet({
+    super.key,
+    required this.post,
+    required this.onPostEdited,
+  });
+
+  @override
+  _EditPostBottomSheetState createState() => _EditPostBottomSheetState();
+}
+
+class _EditPostBottomSheetState extends State<EditPostBottomSheet> {
+  late TextEditingController _contentController;
+  late String selectedCategory;
+
+  @override
+  void initState() {
+    super.initState();
+    _contentController = TextEditingController(text: widget.post.content);
+    selectedCategory = widget.post.category;
+  }
+
+  @override
+  void dispose() {
+    _contentController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.8,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Column(
+          children: [
+            // Handle bar
+            Container(
+              margin: EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            // Header
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  Text(
+                    'Edit Post',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Spacer(),
+                  TextButton(
+                    onPressed: () {
+                      if (_contentController.text.isNotEmpty) {
+                        widget.onPostEdited(
+                          _contentController.text,
+                          selectedCategory,
+                        );
+                        Navigator.pop(context);
+                      }
+                    },
+                    child: Text(
+                      'Save',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.orange[600],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            Divider(),
+
+            // User Info
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Colors.orange[100],
+                    child: Text('👤', style: TextStyle(fontSize: 16)),
+                  ),
+                  SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.post.author,
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      DropdownButton<String>(
+                        value: selectedCategory,
+                        underline: SizedBox(),
+                        items: [
+                          'General',
+                          'Zero Waste',
+                          'Food Safety',
+                          'Recipes',
+                          'Tips'
+                        ]
+                            .map((category) => DropdownMenuItem(
+                                  value: category,
+                                  child: Text(
+                                    category,
+                                    style: GoogleFonts.poppins(fontSize: 12),
+                                  ),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedCategory = value!;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Content Input
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: TextField(
+                  controller: _contentController,
+                  maxLines: null,
+                  expands: true,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    hintText: "What's on your mind?",
+                    hintStyle: GoogleFonts.poppins(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                    ),
+                    border: InputBorder.none,
+                  ),
+                  style: GoogleFonts.poppins(fontSize: 16),
+                  textAlignVertical: TextAlignVertical.top,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

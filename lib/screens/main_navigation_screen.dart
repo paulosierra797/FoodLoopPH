@@ -228,7 +228,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                         child: ListView(
                           padding: EdgeInsets.symmetric(vertical: 16),
                           children: [
-                            _buildDrawerItem(Icons.star_outline, 'My Watchlist',
+                            _buildDrawerItem(Icons.star_outline, 'Claimed Foods',
                                 () {
                               Navigator.of(context).pop();
                               Navigator.push(

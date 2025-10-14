@@ -37,18 +37,20 @@ class WatchlistPage extends ConsumerWidget {
               subtitle: 'Foods you claim will appear here.',
             );
           }
-          return RefreshIndicator(
-            onRefresh: () async {
-              // Trigger a reload of claimed foods
-              final _ = ref.refresh(claimedFoodsProvider);
-              await Future.delayed(const Duration(milliseconds: 300));
-            },
-            child: ListView.separated(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              itemCount: rows.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, i) => _ClaimedFoodCard(data: rows[i]),
+          return SafeArea(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                // Trigger a reload of claimed foods
+                final _ = ref.refresh(claimedFoodsProvider);
+                await Future.delayed(const Duration(milliseconds: 300));
+              },
+              child: ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                itemCount: rows.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, i) => _ClaimedFoodCard(data: rows[i]),
+              ),
             ),
           );
         },
@@ -102,95 +104,108 @@ class _ClaimedFoodCard extends StatelessWidget {
     }
     final dateStr = claimedAt != null ? DateFormat('MMM d, y • h:mm a').format(claimedAt.toLocal()) : '';
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[200]!),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        leading: CircleAvatar(
-          radius: 26,
-          backgroundColor: Colors.orange[100],
-          child: Icon(Icons.fastfood, color: Colors.orange[700]),
-        ),
-        title: Text(
-          title,
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text(
-              'From: $poster',
-              style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[700]),
+    return GestureDetector(
+      onTap: () => _showClaimedOptions(context, data),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[200]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
-            if (dateStr.isNotEmpty) ...[
-              const SizedBox(height: 4),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
               Row(
                 children: [
-                  Icon(Icons.schedule, size: 14, color: Colors.grey[500]),
-                  const SizedBox(width: 4),
-                  Text(dateStr, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600])),
+                  CircleAvatar(
+                    radius: 26,
+                    backgroundColor: Colors.orange[100],
+                    child: Icon(Icons.fastfood, color: Colors.orange[700]),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'From: $poster',
+                          style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[700]),
+                        ),
+                        if (dateStr.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(Icons.schedule, size: 14, color: Colors.grey[500]),
+                              const SizedBox(width: 4),
+                              Text(dateStr, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600])),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.green[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Claimed',
+                      style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.green[700]),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Spacer(),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange[600],
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: () {
+                      final posterId = data['poster_id']?.toString();
+                      final posterName = data['poster_name']?.toString() ?? 'User';
+                      if (posterId != null && posterId.isNotEmpty) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => ChatPage(
+                              otherUserId: posterId,
+                              otherUserName: posterName,
+                              listingId: data['food_listing_id']?.toString(),
+                              listingTitle: data['title']?.toString(),
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    child: Text(
+                      'Message',
+                      style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+                    ),
+                  ),
                 ],
               ),
             ],
-          ],
+          ),
         ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.green[100],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                'Claimed',
-                style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.green[700]),
-              ),
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange[600],
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              onPressed: () {
-                final posterId = data['poster_id']?.toString();
-                final posterName = data['poster_name']?.toString() ?? 'User';
-                if (posterId != null && posterId.isNotEmpty) {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ChatPage(
-                        otherUserId: posterId,
-                        otherUserName: posterName,
-                        listingId: data['food_listing_id']?.toString(),
-                        listingTitle: data['title']?.toString(),
-                      ),
-                    ),
-                  );
-                }
-              },
-              child: Text(
-                'Message',
-                style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
-              ),
-            ),
-          ],
-        ),
-        onTap: () => _showClaimedOptions(context, data),
       ),
     );
   }
