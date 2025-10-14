@@ -12,6 +12,7 @@ class User {
   final double? longitude;
   final String? address;
   final DateTime? lastLocationUpdate;
+  final String? profilePictureUrl;
 
   User({
     required this.id,
@@ -27,6 +28,7 @@ class User {
     this.longitude,
     this.address,
     this.lastLocationUpdate,
+    this.profilePictureUrl,
   });
 
   User copyWith({
@@ -43,6 +45,7 @@ class User {
     double? longitude,
     String? address,
     DateTime? lastLocationUpdate,
+    String? profilePictureUrl,
   }) {
     return User(
       id: id ?? this.id,
@@ -59,6 +62,7 @@ class User {
       longitude: longitude ?? this.longitude,
       address: address ?? this.address,
       lastLocationUpdate: lastLocationUpdate ?? this.lastLocationUpdate,
+      profilePictureUrl: profilePictureUrl ?? this.profilePictureUrl,
     );
   }
 
@@ -77,10 +81,14 @@ class User {
       'longitude': longitude,
       'address': address,
       'lastLocationUpdate': lastLocationUpdate?.toIso8601String(),
+      'profile_picture': profilePictureUrl,
     };
   }
 
   factory User.fromJson(Map<String, dynamic> json) {
+    print(
+        '🖼️ User.fromJson - profile_picture field: ${json['profile_picture']}');
+    print('🔍 All JSON data: ${json.keys.toList()}');
     return User(
       id: json['id'],
       firstName: json['firstName'],
@@ -97,6 +105,7 @@ class User {
       lastLocationUpdate: json['lastLocationUpdate'] != null
           ? DateTime.parse(json['lastLocationUpdate'])
           : null,
+      profilePictureUrl: json['profile_picture'],
     );
   }
 

@@ -6,10 +6,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import 'dart:io';
 import '../providers/food_listings_provider.dart';
 import '../services/storage_service.dart';
 import 'main_navigation_screen.dart';
+import 'map_picker_screen.dart';
 import 'package:flutter/services.dart';
 
 class AddFoodPage extends ConsumerStatefulWidget {
@@ -37,6 +39,7 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
 
   // Location variables
   LatLng? _selectedLocation;
+  String? _selectedAddress;
   bool _isLoadingLocation = false;
 
   final List<String> _categories = [
@@ -68,6 +71,39 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
     'boxes',
   ];
 
+  // Convert coordinates to readable address
+  Future<String> _getAddressFromCoordinates(LatLng location) async {
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        location.latitude,
+        location.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        List<String> addressParts = [];
+
+        if (place.street != null && place.street!.isNotEmpty) {
+          addressParts.add(place.street!);
+        }
+        if (place.locality != null && place.locality!.isNotEmpty) {
+          addressParts.add(place.locality!);
+        }
+        if (place.administrativeArea != null &&
+            place.administrativeArea!.isNotEmpty) {
+          addressParts.add(place.administrativeArea!);
+        }
+
+        return addressParts.join(', ');
+      }
+    } catch (e) {
+      debugPrint('Error getting address: $e');
+    }
+
+    // Fallback to coordinates if address lookup fails
+    return 'Lat: ${location.latitude.toStringAsFixed(6)}, Lng: ${location.longitude.toStringAsFixed(6)}';
+  }
+
   // Get current location
   Future<void> _getCurrentLocation() async {
     setState(() {
@@ -83,8 +119,12 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
       if (permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always) {
         Position position = await Geolocator.getCurrentPosition();
+        LatLng location = LatLng(position.latitude, position.longitude);
+        String address = await _getAddressFromCoordinates(location);
+
         setState(() {
-          _selectedLocation = LatLng(position.latitude, position.longitude);
+          _selectedLocation = location;
+          _selectedAddress = address;
           _isLoadingLocation = false;
         });
       } else {
@@ -138,63 +178,25 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
     );
   }
 
-  // Show map picker (simplified for now - will be a basic coordinate input)
-  void _showMapPicker() {
-    final latController = TextEditingController();
-    final lngController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Enter Coordinates'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: latController,
-              decoration: InputDecoration(
-                labelText: 'Latitude',
-                hintText: 'e.g., 14.329620',
-              ),
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
-            ),
-            SizedBox(height: 16),
-            TextField(
-              controller: lngController,
-              decoration: InputDecoration(
-                labelText: 'Longitude',
-                hintText: 'e.g., 120.937140',
-              ),
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
-            ),
-          ],
+  // Show interactive map picker
+  void _showMapPicker() async {
+    final LatLng? result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MapPickerScreen(
+          initialLocation: _selectedLocation ??
+              LatLng(14.329620, 120.937140), // Default to Dasmariñas
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final lat = double.tryParse(latController.text);
-              final lng = double.tryParse(lngController.text);
-
-              if (lat != null && lng != null) {
-                setState(() {
-                  _selectedLocation = LatLng(lat, lng);
-                });
-                Navigator.pop(context);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Please enter valid coordinates')),
-                );
-              }
-            },
-            child: Text('Set Location'),
-          ),
-        ],
       ),
     );
+
+    if (result != null) {
+      String address = await _getAddressFromCoordinates(result);
+      setState(() {
+        _selectedLocation = result;
+        _selectedAddress = address;
+      });
+    }
   }
 
   @override
@@ -362,7 +364,8 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
                                           keyboardType: TextInputType.number,
                                           required: true,
                                           inputFormatters: [
-                                            FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                                            FilteringTextInputFormatter.allow(
+                                                RegExp(r'[0-9.]')),
                                           ],
                                         ),
                                       ),
@@ -373,7 +376,8 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
                                           label: 'Measurement',
                                           items: _measurementOptions,
                                           icon: Icons.straighten,
-                                          onChanged: (value) => setState(() => _selectedMeasurement = value!),
+                                          onChanged: (value) => setState(() =>
+                                              _selectedMeasurement = value!),
                                         ),
                                       ),
                                     ],
@@ -402,7 +406,8 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
                                       keyboardType: TextInputType.number,
                                       required: true,
                                       inputFormatters: [
-                                        FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                                        FilteringTextInputFormatter.allow(
+                                            RegExp(r'[0-9.]')),
                                       ],
                                     ),
                                   ),
@@ -413,7 +418,8 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
                                       label: 'Measurement',
                                       items: _measurementOptions,
                                       icon: Icons.straighten,
-                                      onChanged: (value) => setState(() => _selectedMeasurement = value!),
+                                      onChanged: (value) => setState(
+                                          () => _selectedMeasurement = value!),
                                     ),
                                   ),
                                   SizedBox(width: 16),
@@ -518,8 +524,8 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
                                         Text(
                                           _isLoadingLocation
                                               ? 'Getting location...'
-                                              : _selectedLocation != null
-                                                  ? 'Lat: ${_selectedLocation!.latitude.toStringAsFixed(6)}, Lng: ${_selectedLocation!.longitude.toStringAsFixed(6)}'
+                                              : _selectedAddress != null
+                                                  ? _selectedAddress!
                                                   : 'Tap to set location for map display',
                                           style: GoogleFonts.poppins(
                                             fontSize: 12,

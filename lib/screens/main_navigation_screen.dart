@@ -57,7 +57,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     final userService = ref.watch(userServiceProvider);
-    
+
     // Watch the tab navigation provider and update selectedIndex
     ref.listen<int>(tabNavigationProvider, (previous, next) {
       if (next >= 0 && next < _pages.length) {
@@ -151,7 +151,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
           // End Drawer for hamburger menu (right side)
           endDrawer: SizedBox(
             width: MediaQuery.of(context).size.width *
-                0.45, // Reduced from 0.85 to 0.45 (45%)
+                0.65, // Increased from 0.45 to 0.65 (65%) for better text display
             child: Drawer(
               child: Container(
                 color: Colors.white,
@@ -160,7 +160,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                     children: [
                       // Header with User Info
                       Container(
-                        padding: EdgeInsets.all(20),
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(vertical: 20),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [Colors.orange[400]!, Colors.orange[600]!],
@@ -173,25 +174,38 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                             CircleAvatar(
                               radius: 30,
                               backgroundColor: Colors.white,
-                              child: Text(
-                                (() {
-                                  final user = userService.currentUser;
-                                  final fullName = user?.fullName ?? "";
-                                  return fullName.isNotEmpty
+                              backgroundImage: (() {
+                                final user = userService.currentUser;
+                                if (user?.profilePictureUrl != null &&
+                                    user!.profilePictureUrl!.isNotEmpty) {
+                                  return NetworkImage(user.profilePictureUrl!)
+                                      as ImageProvider;
+                                }
+                                return null;
+                              })(),
+                              child: (() {
+                                final user = userService.currentUser;
+                                if (user?.profilePictureUrl != null &&
+                                    user!.profilePictureUrl!.isNotEmpty) {
+                                  return null;
+                                }
+                                final fullName = user?.fullName ?? "";
+                                return Text(
+                                  fullName.isNotEmpty
                                       ? fullName
                                           .split(' ')
                                           .map((name) =>
                                               name.isNotEmpty ? name[0] : '')
                                           .take(2)
                                           .join('')
-                                      : "JD";
-                                })(),
-                                style: GoogleFonts.poppins(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.orange[600],
-                                ),
-                              ),
+                                      : "JD",
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.orange[600],
+                                  ),
+                                );
+                              })(),
                             ),
                             SizedBox(height: 12),
                             Column(
@@ -228,8 +242,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
                         child: ListView(
                           padding: EdgeInsets.symmetric(vertical: 16),
                           children: [
-                            _buildDrawerItem(Icons.star_outline, 'Claimed Foods',
-                                () {
+                            _buildDrawerItem(
+                                Icons.star_outline, 'Claimed Foods', () {
                               Navigator.of(context).pop();
                               Navigator.push(
                                 context,
@@ -378,10 +392,14 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
       title: Text(
         title,
         style: GoogleFonts.poppins(
-          fontSize: 16,
+          fontSize:
+              title.length > 12 ? 14 : 16, // Smaller font for longer titles
           fontWeight: FontWeight.w500,
         ),
+        maxLines: 2, // Allow text to wrap to 2 lines
+        overflow: TextOverflow.ellipsis,
       ),
+      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       onTap: onTap,
     );
   } // Added missing closing brace for the method

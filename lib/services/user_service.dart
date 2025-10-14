@@ -23,16 +23,26 @@ class UserService extends ChangeNotifier {
   // Initialize user service
   Future<void> initialize() async {
     await _loadUserFromStorage();
+
+    // If user is authenticated, sync fresh data from Supabase
+    final supabase = Supabase.instance.client;
+    if (supabase.auth.currentUser != null) {
+      await syncUserFromSupabase();
+    }
+
     await _checkLocationPermission();
   }
 
   // Fetch user data from Supabase and update local storage
   Future<void> syncUserFromSupabase() async {
+    print('🔄 syncUserFromSupabase: Starting sync...');
     final supabase = Supabase.instance.client;
     final authUser = supabase.auth.currentUser;
     if (authUser == null) return;
     Map<String, dynamic>? data;
     try {
+      print(
+          '🔍 syncUserFromSupabase: Querying database for user ${authUser.id}');
       final resp = await supabase
           .from('users')
           .select()
@@ -40,6 +50,11 @@ class UserService extends ChangeNotifier {
           .maybeSingle();
       if (resp != null) {
         data = Map<String, dynamic>.from(resp as Map);
+        print('✅ syncUserFromSupabase: Database response received');
+        print(
+            '🖼️ syncUserFromSupabase: profile_picture from DB: ${data['profile_picture']}');
+      } else {
+        print('⚠️ syncUserFromSupabase: No database response received');
       }
     } catch (e) {
       debugPrint(
@@ -57,6 +72,10 @@ class UserService extends ChangeNotifier {
     final birthDate = data?['birth_date'];
     final gender = data?['sex'];
 
+    final profilePictureUrl = data?['profile_picture'];
+    print(
+        '🖼️ syncUserFromSupabase: Creating User with profilePictureUrl: $profilePictureUrl');
+
     _currentUser = app_model.User(
       id: (data?['id'] ?? authUser.id).toString(),
       firstName: firstName,
@@ -71,6 +90,7 @@ class UserService extends ChangeNotifier {
       longitude: null,
       address: null,
       lastLocationUpdate: null,
+      profilePictureUrl: profilePictureUrl,
     );
     await _saveUserToStorage();
     notifyListeners();
@@ -167,6 +187,7 @@ class UserService extends ChangeNotifier {
     String? phoneNumber,
     String? birthDate,
     String? gender,
+    String? profilePictureUrl,
   }) async {
     if (_currentUser != null) {
       // Convert birthDate to YYYY-MM-DD if needed
@@ -206,11 +227,14 @@ class UserService extends ChangeNotifier {
         'phone_number': phoneNumber,
         'birth_date': formattedBirthDate,
         'sex': gender,
+        'profile_picture': profilePictureUrl,
       };
       // Remove nulls so we don't overwrite with null
       updateData.removeWhere((key, value) => value == null);
       await supabase.from('users').update(updateData).eq('id', userId);
 
+      // Refresh user data from database to get the updated profile picture
+      await syncUserFromSupabase();
       await _saveUserToStorage();
       notifyListeners();
     }

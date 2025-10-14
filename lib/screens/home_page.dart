@@ -8,13 +8,14 @@ import '../providers/food_listings_provider.dart';
 import '../providers/dashboard_metrics_provider.dart';
 
 // Provider for managing tab navigation
-final tabNavigationProvider = StateNotifierProvider<TabNavigationNotifier, int>((ref) {
+final tabNavigationProvider =
+    StateNotifierProvider<TabNavigationNotifier, int>((ref) {
   return TabNavigationNotifier();
 });
 
 class TabNavigationNotifier extends StateNotifier<int> {
   TabNavigationNotifier() : super(0);
-  
+
   void changeTab(int index) {
     // Always trigger a change, even if it's the same index
     if (state == index) {
@@ -23,7 +24,7 @@ class TabNavigationNotifier extends StateNotifier<int> {
     }
     state = index;
   }
-  
+
   void updateTab(int index) {
     // Direct update without forcing change logic
     state = index;
@@ -207,12 +208,26 @@ class HomePage extends ConsumerWidget {
                             ),
                           );
                         }
-                        // Show up to 5 latest listings
-                        final featured = listings.take(5).toList();
+                        // Filter out claimed listings and show up to 5 latest available listings
+                        final availableListings = listings
+                            .where((listing) => listing['status'] != 'claimed')
+                            .take(5)
+                            .toList();
+
+                        if (availableListings.isEmpty) {
+                          return Center(
+                            child: Text(
+                              'No available food listings at the moment.',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 16, color: Colors.grey[600]),
+                            ),
+                          );
+                        }
+
                         return ListView.builder(
-                          itemCount: featured.length,
+                          itemCount: availableListings.length,
                           itemBuilder: (context, index) {
-                            final item = featured[index];
+                            final item = availableListings[index];
                             return _buildFeaturedListingCard(context, item);
                           },
                         );
@@ -280,7 +295,8 @@ class HomePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildFeaturedListingCard(BuildContext context, Map<String, dynamic> item) {
+  Widget _buildFeaturedListingCard(
+      BuildContext context, Map<String, dynamic> item) {
     // Map Supabase fields to card fields
     final title = (item['title'] ?? 'No Title').toString();
     final description = (item['description'] ?? '').toString();

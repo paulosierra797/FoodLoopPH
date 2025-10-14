@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/user_service_provider.dart';
+import '../services/storage_service.dart';
 import 'package:flutter/services.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
@@ -26,7 +27,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   final _birthController = TextEditingController();
   String _selectedGender = 'Male';
   File? _profileImage;
- 
+
   @override
   void initState() {
     super.initState();
@@ -200,8 +201,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 children: [
                   Text(
                     user != null
-                      ? "Good Day, ${user.firstName.isNotEmpty ? user.firstName : user.username}"
-                      : "Good Day, User",
+                        ? "Good Day, ${user.firstName.isNotEmpty ? user.firstName : user.username}"
+                        : "Good Day, User",
                     style: GoogleFonts.poppins(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -245,7 +246,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                   ),
                                 ],
                               ),
-                              child: Icon(Icons.arrow_back, size: 20, color: Colors.grey[700]),
+                              child: Icon(Icons.arrow_back,
+                                  size: 20, color: Colors.grey[700]),
                             ),
                           ),
                           Spacer(),
@@ -267,8 +269,22 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                   backgroundColor: Colors.grey[300],
                                   backgroundImage: _profileImage != null
                                       ? FileImage(_profileImage!)
-                                      : null,
-                                  child: _profileImage == null
+                                          as ImageProvider
+                                      : (() {
+                                          print(
+                                              '🖼️ Profile page - user.profilePictureUrl: ${user?.profilePictureUrl}');
+                                          return (user?.profilePictureUrl !=
+                                                      null &&
+                                                  user!.profilePictureUrl!
+                                                      .isNotEmpty)
+                                              ? NetworkImage(
+                                                      user.profilePictureUrl!)
+                                                  as ImageProvider
+                                              : null;
+                                        })(),
+                                  child: (_profileImage == null &&
+                                          (user?.profilePictureUrl == null ||
+                                              user!.profilePictureUrl!.isEmpty))
                                       ? Icon(Icons.person,
                                           size: 40, color: Colors.grey[600])
                                       : null,
@@ -337,7 +353,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             _buildTextField("First Name", _firstNameController),
                             _buildTextField("Last Name", _lastNameController),
                             _buildUsernameField(),
-                            _buildTextField("Email", _emailController, enabled: false),
+                            _buildTextField("Email", _emailController,
+                                enabled: false),
                             _buildPhoneNumberField(),
                             _buildBirthDateField(context),
                             _buildGenderDropdown(),
@@ -607,8 +624,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 fontSize: 14,
                 color: Colors.black87,
               ),
-              items: ['Male', 'Female']
-                  .map((String value) {
+              items: ['Male', 'Female'].map((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
                   child: Text(value),
@@ -645,7 +661,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               context: context,
               builder: (context) => AlertDialog(
                 title: Text('Confirm Update'),
-                content: Text('Are you sure you want to update your profile information?'),
+                content: Text(
+                    'Are you sure you want to update your profile information?'),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context, false),
@@ -653,31 +670,54 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ),
                   TextButton(
                     onPressed: () => Navigator.pop(context, true),
-                    style: TextButton.styleFrom(foregroundColor: Colors.amber[700]),
+                    style: TextButton.styleFrom(
+                        foregroundColor: Colors.amber[700]),
                     child: Text('Update'),
                   ),
                 ],
               ),
             );
             if (confirmed == true) {
-              await ref.read(userServiceProvider).updateUserProfile(
-                firstName: _firstNameController.text.trim(),
-                lastName: _lastNameController.text.trim(),
-                username: _usernameController.text.trim(),
-                email: _emailController.text.trim(),
-                phoneNumber: _phoneController.text.trim(),
-                birthDate: _birthController.text.trim(),
-                gender: _selectedGender,
-              );
-              ScaffoldMessenger.of(context)
-                  .showSnackBar(
-                SnackBar(
-                  content: Text(
-                      'Profile updated successfully!'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-              Navigator.pop(context);
+              try {
+                String? profilePictureUrl;
+
+                // Upload profile picture if one was selected
+                if (_profileImage != null) {
+                  final storageService = StorageService();
+                  profilePictureUrl =
+                      await storageService.uploadProfileImage(_profileImage!);
+                }
+
+                // Update user profile with all data including profile picture URL
+                await ref.read(userServiceProvider).updateUserProfile(
+                      firstName: _firstNameController.text.trim(),
+                      lastName: _lastNameController.text.trim(),
+                      username: _usernameController.text.trim(),
+                      email: _emailController.text.trim(),
+                      phoneNumber: _phoneController.text.trim(),
+                      birthDate: _birthController.text.trim(),
+                      gender: _selectedGender,
+                      profilePictureUrl: profilePictureUrl,
+                    );
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Profile updated successfully!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+
+                // Small delay to ensure user service refreshes
+                await Future.delayed(Duration(milliseconds: 500));
+                Navigator.pop(context);
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error updating profile: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             }
           }
         },

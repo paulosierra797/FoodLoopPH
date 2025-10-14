@@ -73,11 +73,11 @@ class _ChatListPageState extends State<ChatListPage> {
 
       // Group messages by conversation partner
       Map<String, Map<String, dynamic>> conversationsMap = {};
-      
+
       for (var data in response as List<dynamic>) {
         final isSender = data['sender_id'] == currentUserId;
         final otherUserId = isSender ? data['receiver_id'] : data['sender_id'];
-        
+
         // Build user name from first_name and last_name
         String otherUserName = 'Unknown User';
         if (isSender && data['receiver'] != null) {
@@ -93,14 +93,16 @@ class _ChatListPageState extends State<ChatListPage> {
           otherUserName = '$firstName $lastName'.trim();
           if (otherUserName.isEmpty) otherUserName = 'Unknown User';
         }
-        
+
         final messageText = data['message_text'] ?? '';
-        final timestamp = DateTime.tryParse(data['timestamp'] ?? '') ?? DateTime.now();
-        
-        debugPrint('Processing message: sender=$isSender, otherUserId=$otherUserId, otherUserName=$otherUserName, message=$messageText');
-        
+        final timestamp =
+            DateTime.tryParse(data['timestamp'] ?? '') ?? DateTime.now();
+
+        debugPrint(
+            'Processing message: sender=$isSender, otherUserId=$otherUserId, otherUserName=$otherUserName, message=$messageText');
+
         // Use other user ID as key to group conversations
-        if (!conversationsMap.containsKey(otherUserId) || 
+        if (!conversationsMap.containsKey(otherUserId) ||
             conversationsMap[otherUserId]!['timestamp'].isBefore(timestamp)) {
           conversationsMap[otherUserId] = {
             'other_user_id': otherUserId,
@@ -111,12 +113,13 @@ class _ChatListPageState extends State<ChatListPage> {
           };
         }
       }
-      
+
       debugPrint('Conversations map: $conversationsMap');
-      
+
       // Convert map to list and sort by timestamp
       final conversationsList = conversationsMap.values.toList();
-      conversationsList.sort((a, b) => b['timestamp'].compareTo(a['timestamp']));
+      conversationsList
+          .sort((a, b) => b['timestamp'].compareTo(a['timestamp']));
 
       debugPrint('Final conversations list: $conversationsList');
 
@@ -127,7 +130,7 @@ class _ChatListPageState extends State<ChatListPage> {
     } catch (e, stackTrace) {
       debugPrint('Error loading conversations: $e');
       debugPrint('Stack trace: $stackTrace');
-      
+
       // Fallback: Load messages without user join and fetch user names separately
       try {
         final currentUserIdFallback = _supabase.auth.currentUser?.id;
@@ -135,27 +138,29 @@ class _ChatListPageState extends State<ChatListPage> {
           setState(() => _isLoading = false);
           return;
         }
-        
+
         debugPrint('Attempting fallback query...');
         final fallbackResponse = await _supabase
             .from('chat_messages')
             .select('sender_id, receiver_id, message_text, timestamp')
             .or('sender_id.eq.$currentUserIdFallback,receiver_id.eq.$currentUserIdFallback')
             .order('timestamp', ascending: false);
-        
+
         debugPrint('Fallback query result: $fallbackResponse');
-        
+
         // Group messages by conversation partner
         Map<String, Map<String, dynamic>> conversationsMap = {};
-        
+
         for (var data in fallbackResponse as List<dynamic>) {
           final isSender = data['sender_id'] == currentUserIdFallback;
-          final otherUserId = isSender ? data['receiver_id'] : data['sender_id'];
+          final otherUserId =
+              isSender ? data['receiver_id'] : data['sender_id'];
           final messageText = data['message_text'] ?? '';
-          final timestamp = DateTime.tryParse(data['timestamp'] ?? '') ?? DateTime.now();
-          
+          final timestamp =
+              DateTime.tryParse(data['timestamp'] ?? '') ?? DateTime.now();
+
           // Use other user ID as key to group conversations
-          if (!conversationsMap.containsKey(otherUserId) || 
+          if (!conversationsMap.containsKey(otherUserId) ||
               conversationsMap[otherUserId]!['timestamp'].isBefore(timestamp)) {
             conversationsMap[otherUserId] = {
               'other_user_id': otherUserId,
@@ -166,7 +171,7 @@ class _ChatListPageState extends State<ChatListPage> {
             };
           }
         }
-        
+
         // Fetch usernames for each conversation partner
         for (String userId in conversationsMap.keys) {
           try {
@@ -175,13 +180,14 @@ class _ChatListPageState extends State<ChatListPage> {
                 .select('first_name, last_name, email')
                 .eq('id', userId)
                 .maybeSingle();
-            
+
             if (userResponse != null) {
               final firstName = userResponse['first_name'] ?? '';
               final lastName = userResponse['last_name'] ?? '';
               String userName = '$firstName $lastName'.trim();
               if (userName.isEmpty) {
-                userName = userResponse['email']?.toString().split('@')[0] ?? 'User';
+                userName =
+                    userResponse['email']?.toString().split('@')[0] ?? 'User';
               }
               conversationsMap[userId]!['other_user_name'] = userName;
             }
@@ -190,16 +196,16 @@ class _ChatListPageState extends State<ChatListPage> {
             // Keep the placeholder name
           }
         }
-        
+
         // Convert map to list and sort by timestamp
         final conversationsList = conversationsMap.values.toList();
-        conversationsList.sort((a, b) => b['timestamp'].compareTo(a['timestamp']));
+        conversationsList
+            .sort((a, b) => b['timestamp'].compareTo(a['timestamp']));
 
         setState(() {
           _conversations = conversationsList;
           _isLoading = false;
         });
-        
       } catch (fallbackError) {
         debugPrint('Fallback query also failed: $fallbackError');
         setState(() => _isLoading = false);
@@ -217,7 +223,7 @@ class _ChatListPageState extends State<ChatListPage> {
           Container(
             padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.amber[700],
+              color: Colors.white,
               boxShadow: [
                 BoxShadow(
                   color: Colors.grey.withOpacity(0.1),
@@ -295,8 +301,10 @@ class _ChatListPageState extends State<ChatListPage> {
     final filteredConversations = _searchQuery.isEmpty
         ? _conversations
         : _conversations.where((conv) {
-            final name = conv['other_user_name']?.toString().toLowerCase() ?? '';
-            final email = conv['other_user_email']?.toString().toLowerCase() ?? '';
+            final name =
+                conv['other_user_name']?.toString().toLowerCase() ?? '';
+            final email =
+                conv['other_user_email']?.toString().toLowerCase() ?? '';
             final query = _searchQuery.toLowerCase();
             return name.contains(query) || email.contains(query);
           }).toList();
@@ -315,12 +323,13 @@ class _ChatListPageState extends State<ChatListPage> {
   }
 
   Widget _buildConversationTile(Map<String, dynamic> conversation) {
-    final otherUserName = conversation['other_user_name']?.toString() ?? 'Unknown User';
+    final otherUserName =
+        conversation['other_user_name']?.toString() ?? 'Unknown User';
 
     final lastMessage = conversation['last_message']?.toString() ?? '';
-    final lastMessageTime = conversation['last_message_time'] is DateTime 
+    final lastMessageTime = conversation['last_message_time'] is DateTime
         ? conversation['last_message_time'] as DateTime
-        : (conversation['last_message_time'] != null 
+        : (conversation['last_message_time'] != null
             ? DateTime.parse(conversation['last_message_time'].toString())
             : DateTime.now());
     final unreadCount = conversation['unread_count'] ?? 0;
