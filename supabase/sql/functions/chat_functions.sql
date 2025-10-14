@@ -110,6 +110,7 @@ RETURNS TABLE (
     message_text text,
     "timestamp" timestamp,
     sender_name text,
+    sender_profile_image text,
     is_from_current_user boolean
 )
 LANGUAGE plpgsql
@@ -124,6 +125,7 @@ BEGIN
         cm.message_text,
         cm."timestamp",
         CONCAT(u.first_name, ' ', u.last_name) as sender_name,
+        u.profile_picture as sender_profile_image,
         (cm.sender_id = user_id) as is_from_current_user
     FROM chat_messages cm
     LEFT JOIN users u ON u.id = cm.sender_id

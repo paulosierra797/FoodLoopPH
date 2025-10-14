@@ -39,7 +39,7 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> _loadUserProfileImage() async {
     try {
       final currentUserId = _supabase.auth.currentUser?.id;
-      
+
       // Load other user's profile image
       final otherUserResponse = await _supabase
           .from('users')
@@ -60,7 +60,8 @@ class _ChatPageState extends State<ChatPage> {
 
       if (mounted) {
         setState(() {
-          _otherUserProfileImage = otherUserResponse['profile_picture']?.toString();
+          _otherUserProfileImage =
+              otherUserResponse['profile_picture']?.toString();
           _currentUserProfileImage = currentUserImage;
         });
       }
@@ -151,13 +152,13 @@ class _ChatPageState extends State<ChatPage> {
             CircleAvatar(
               radius: 20,
               backgroundColor: Colors.amber[100],
-              backgroundImage: _otherUserProfileImage != null 
-                  ? NetworkImage(_otherUserProfileImage!) 
+              backgroundImage: _otherUserProfileImage != null
+                  ? NetworkImage(_otherUserProfileImage!)
                   : null,
               child: _otherUserProfileImage == null
                   ? Text(
-                      widget.otherUserName.isNotEmpty 
-                          ? widget.otherUserName[0].toUpperCase() 
+                      widget.otherUserName.isNotEmpty
+                          ? widget.otherUserName[0].toUpperCase()
                           : 'U',
                       style: GoogleFonts.poppins(
                         fontWeight: FontWeight.w600,
@@ -263,9 +264,24 @@ class _ChatPageState extends State<ChatPage> {
     final messageText = message['message_text']?.toString() ?? '';
     final senderName = message['sender_name']?.toString() ?? 'Unknown';
     final senderProfileImage = message['sender_profile_image']?.toString();
-    final timestamp = message['timestamp'] != null 
-        ? DateTime.parse(message['timestamp']) 
-        : DateTime.now();
+
+    // Parse timestamp - SQL function now returns proper timezone info
+    DateTime timestamp;
+    if (message['timestamp'] != null) {
+      try {
+        timestamp = DateTime.parse(message['timestamp'].toString()).toLocal();
+      } catch (e) {
+        debugPrint('Error parsing timestamp: $e');
+        timestamp = DateTime.now();
+      }
+    } else {
+      timestamp = DateTime.now();
+    }
+
+    // Consider message as "unread" if it's from other user and very recent (< 2 minutes)
+    final now = DateTime.now();
+    final isRecentMessage = now.difference(timestamp).inMinutes < 2;
+    final isUnread = !isMe && isRecentMessage;
 
     return Container(
       margin: EdgeInsets.only(bottom: 16),
@@ -278,8 +294,8 @@ class _ChatPageState extends State<ChatPage> {
             CircleAvatar(
               radius: 16,
               backgroundColor: Colors.amber[100],
-              backgroundImage: senderProfileImage != null 
-                  ? NetworkImage(senderProfileImage) 
+              backgroundImage: senderProfileImage != null
+                  ? NetworkImage(senderProfileImage)
                   : null,
               child: senderProfileImage == null
                   ? Text(
@@ -301,7 +317,12 @@ class _ChatPageState extends State<ChatPage> {
               ),
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isMe ? Colors.amber[600] : Colors.white,
+                color: isMe
+                    ? Colors.amber[600]
+                    : (isUnread ? Colors.amber[50] : Colors.white),
+                border: isUnread
+                    ? Border.all(color: Colors.amber[300]!, width: 2)
+                    : null,
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(18),
                   topRight: Radius.circular(18),
@@ -310,8 +331,10 @@ class _ChatPageState extends State<ChatPage> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 5,
+                    color: isUnread
+                        ? Colors.amber.withOpacity(0.2)
+                        : Colors.black.withOpacity(0.05),
+                    blurRadius: isUnread ? 8 : 5,
                     offset: Offset(0, 2),
                   ),
                 ],
@@ -320,19 +343,44 @@ class _ChatPageState extends State<ChatPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (!isMe)
-                    Text(
-                      senderName,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.amber[800],
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          senderName,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.amber[800],
+                          ),
+                        ),
+                        if (isUnread) ...[
+                          SizedBox(width: 8),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.orange[600],
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              'NEW',
+                              style: GoogleFonts.poppins(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   if (!isMe) SizedBox(height: 4),
                   Text(
                     messageText,
                     style: GoogleFonts.poppins(
                       fontSize: 14,
+                      fontWeight:
+                          isUnread ? FontWeight.w600 : FontWeight.normal,
                       color: isMe ? Colors.white : Colors.black87,
                       height: 1.4,
                     ),
@@ -354,8 +402,8 @@ class _ChatPageState extends State<ChatPage> {
             CircleAvatar(
               radius: 16,
               backgroundColor: Colors.amber[600],
-              backgroundImage: _currentUserProfileImage != null 
-                  ? NetworkImage(_currentUserProfileImage!) 
+              backgroundImage: _currentUserProfileImage != null
+                  ? NetworkImage(_currentUserProfileImage!)
                   : null,
               child: _currentUserProfileImage == null
                   ? Icon(Icons.person, size: 18, color: Colors.white)
@@ -507,7 +555,8 @@ class _ChatPageState extends State<ChatPage> {
       // Fetch user details from database
       final response = await _supabase
           .from('users')
-          .select('id, first_name, last_name, username, email, created_at, profile_picture')
+          .select(
+              'id, first_name, last_name, username, email, created_at, profile_picture')
           .eq('id', widget.otherUserId)
           .single();
 
@@ -524,14 +573,15 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  void _displayUserProfileDialog(BuildContext context, Map<String, dynamic> userData) {
+  void _displayUserProfileDialog(
+      BuildContext context, Map<String, dynamic> userData) {
     final firstName = userData['first_name']?.toString() ?? '';
     final lastName = userData['last_name']?.toString() ?? '';
     final username = userData['username']?.toString() ?? '';
     final email = userData['email']?.toString() ?? '';
     final profileImageUrl = userData['profile_picture']?.toString();
-    final createdAt = userData['created_at'] != null 
-        ? DateTime.parse(userData['created_at']) 
+    final createdAt = userData['created_at'] != null
+        ? DateTime.parse(userData['created_at'])
         : null;
 
     final fullName = '$firstName $lastName'.trim();
@@ -541,7 +591,8 @@ class _ChatPageState extends State<ChatPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           contentPadding: EdgeInsets.zero,
           content: Container(
             width: MediaQuery.of(context).size.width * 0.8,
@@ -557,19 +608,22 @@ class _ChatPageState extends State<ChatPage> {
                   padding: EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     color: Colors.amber[50],
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(16)),
                   ),
                   child: Column(
                     children: [
                       CircleAvatar(
                         radius: 40,
                         backgroundColor: Colors.amber[100],
-                        backgroundImage: profileImageUrl != null 
-                            ? NetworkImage(profileImageUrl) 
+                        backgroundImage: profileImageUrl != null
+                            ? NetworkImage(profileImageUrl)
                             : null,
                         child: profileImageUrl == null
                             ? Text(
-                                displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U',
+                                displayName.isNotEmpty
+                                    ? displayName[0].toUpperCase()
+                                    : 'U',
                                 style: GoogleFonts.poppins(
                                   fontSize: 32,
                                   fontWeight: FontWeight.bold,
@@ -601,7 +655,7 @@ class _ChatPageState extends State<ChatPage> {
                     ],
                   ),
                 ),
-                
+
                 // User details
                 Padding(
                   padding: EdgeInsets.all(24),
@@ -610,14 +664,15 @@ class _ChatPageState extends State<ChatPage> {
                       _buildProfileDetailRow(Icons.email, 'Email', email),
                       SizedBox(height: 16),
                       _buildProfileDetailRow(
-                        Icons.calendar_today, 
-                        'Member since', 
-                        createdAt != null ? _formatDate(createdAt) : 'Unknown'
-                      ),
+                          Icons.calendar_today,
+                          'Member since',
+                          createdAt != null
+                              ? _formatDate(createdAt)
+                              : 'Unknown'),
                     ],
                   ),
                 ),
-                
+
                 // Close button
                 Padding(
                   padding: EdgeInsets.only(bottom: 16),
@@ -625,7 +680,8 @@ class _ChatPageState extends State<ChatPage> {
                     onPressed: () => Navigator.pop(context),
                     style: TextButton.styleFrom(
                       backgroundColor: Colors.amber[600],
-                      padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -682,10 +738,20 @@ class _ChatPageState extends State<ChatPage> {
 
   String _formatDate(DateTime dateTime) {
     final months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
     ];
-    
+
     return '${months[dateTime.month - 1]} ${dateTime.year}';
   }
 
@@ -693,8 +759,15 @@ class _ChatPageState extends State<ChatPage> {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
 
-    if (difference.inMinutes < 1) {
+    // Handle future timestamps (shouldn't happen but just in case)
+    if (difference.isNegative) {
       return 'Just now';
+    }
+
+    if (difference.inSeconds < 30) {
+      return 'Just now';
+    } else if (difference.inMinutes < 1) {
+      return '${difference.inSeconds}s ago';
     } else if (difference.inMinutes < 60) {
       return '${difference.inMinutes}m ago';
     } else if (difference.inHours < 24) {

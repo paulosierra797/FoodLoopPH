@@ -13,9 +13,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   bool notificationsEnabled = true;
   bool newFoodNearby = true;
   bool foodClaimUpdates = true;
-  bool pickUpReminders = true;
   bool donorMessages = true;
-  bool ratingsAndFeedback = true;
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +98,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
 
                   SizedBox(height: 32),
 
-                  // Notification categories
+                  // Notification categories (only working ones)
                   _buildNotificationItem(
                     'New Food Nearby',
                     'Get notified when someone posts available food near your location.',
@@ -116,24 +114,10 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                   ),
 
                   _buildNotificationItem(
-                    'Pick Up Reminders',
-                    'Remind me before my scheduled food pickup.',
-                    pickUpReminders,
-                    (value) => setState(() => pickUpReminders = value),
-                  ),
-
-                  _buildNotificationItem(
                     'Donor Messages',
                     'Get notified when a donor or recipient sends you a message.',
                     donorMessages,
                     (value) => setState(() => donorMessages = value),
-                  ),
-
-                  _buildNotificationItem(
-                    'Ratings & Feedback',
-                    'Notifications when you receive a new rating or review.',
-                    ratingsAndFeedback,
-                    (value) => setState(() => ratingsAndFeedback = value),
                   ),
                 ],
               ),

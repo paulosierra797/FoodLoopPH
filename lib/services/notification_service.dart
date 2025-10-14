@@ -12,16 +12,12 @@ class NotificationService extends ChangeNotifier {
   bool _notificationsEnabled = true;
   bool _newFoodNearby = true;
   bool _foodClaimUpdates = true;
-  bool _pickupReminders = true;
   bool _donorMessages = true;
-  bool _ratingsFeedback = true;
 
   bool get notificationsEnabled => _notificationsEnabled;
   bool get newFoodNearby => _newFoodNearby;
   bool get foodClaimUpdates => _foodClaimUpdates;
-  bool get pickupReminders => _pickupReminders;
   bool get donorMessages => _donorMessages;
-  bool get ratingsFeedback => _ratingsFeedback;
 
   Future<void> initialize() async {
     // Initialize the plugin
@@ -147,20 +143,6 @@ class NotificationService extends ChangeNotifier {
     );
   }
 
-  Future<void> showPickupReminderNotification({
-    required String foodName,
-    required String time,
-  }) async {
-    if (!_pickupReminders) return;
-
-    await showNotification(
-      id: 3,
-      title: 'Pickup Reminder ⏰',
-      body: 'Don\'t forget to pickup $foodName at $time',
-      payload: 'pickup_reminder',
-    );
-  }
-
   Future<void> showDonorMessageNotification({
     required String senderName,
     required String message,
@@ -175,21 +157,6 @@ class NotificationService extends ChangeNotifier {
     );
   }
 
-  Future<void> showRatingFeedbackNotification({
-    required String reviewerName,
-    required int rating,
-  }) async {
-    if (!_ratingsFeedback) return;
-
-    String stars = '⭐' * rating;
-    await showNotification(
-      id: 5,
-      title: 'New Rating Received! $stars',
-      body: '$reviewerName gave you a $rating-star rating',
-      payload: 'new_rating',
-    );
-  }
-
   // Settings update methods
   void updateNotificationsEnabled(bool enabled) {
     _notificationsEnabled = enabled;
@@ -197,9 +164,7 @@ class NotificationService extends ChangeNotifier {
       // Disable all notification types when main toggle is off
       _newFoodNearby = false;
       _foodClaimUpdates = false;
-      _pickupReminders = false;
       _donorMessages = false;
-      _ratingsFeedback = false;
     }
     notifyListeners();
   }
@@ -214,22 +179,12 @@ class NotificationService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updatePickupReminders(bool enabled) {
-    _pickupReminders = enabled;
-    notifyListeners();
-  }
-
   void updateDonorMessages(bool enabled) {
     _donorMessages = enabled;
     notifyListeners();
   }
 
-  void updateRatingsFeedback(bool enabled) {
-    _ratingsFeedback = enabled;
-    notifyListeners();
-  }
-
-  // Demo notifications for testing
+  // Demo notifications for testing (only working ones)
   Future<void> sendTestNotifications() async {
     await Future.delayed(Duration(seconds: 2));
     await showNewFoodNearbyNotification(
@@ -242,12 +197,6 @@ class NotificationService extends ChangeNotifier {
     await showDonorMessageNotification(
       senderName: 'Carlos Santos',
       message: 'Hi! The food is ready for pickup.',
-    );
-
-    await Future.delayed(Duration(seconds: 8));
-    await showPickupReminderNotification(
-      foodName: 'Burger & Fries',
-      time: '3:00 PM',
     );
   }
 }
