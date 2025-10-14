@@ -1,181 +1,166 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-import '../../providers/user_food_listings_provider.dart';
 
 /// Admin screen to view and manage user food listings
 /// Utilizes:
 /// - user_food_view (SQL VIEW for joined user + food data)
 /// - get_user_food_listings (Stored Function)
-class UserListingsAnalyticsScreen extends ConsumerStatefulWidget {
+class UserListingsAnalyticsScreen extends StatefulWidget {
   const UserListingsAnalyticsScreen({Key? key}) : super(key: key);
 
   @override
-  ConsumerState<UserListingsAnalyticsScreen> createState() => _UserListingsAnalyticsScreenState();
+  State<UserListingsAnalyticsScreen> createState() => _UserListingsAnalyticsScreenState();
 }
 
-class _UserListingsAnalyticsScreenState extends ConsumerState<UserListingsAnalyticsScreen> {
+class _UserListingsAnalyticsScreenState extends State<UserListingsAnalyticsScreen> {
   int _limit = 20;
   int _offset = 0;
   String? _statusFilter;
-  String _orderBy = 'created_at';
   String _orderDir = 'desc';
   String _search = ''; // search by user email or name
-  String? _selectedUserId;
-  String _viewMode = 'view'; // 'provider' or 'view' - default to 'view' since RPC not deployed
-  List<Map<String, dynamic>> _viewData = []; // Data from user_food_view
-  bool _loadingView = false;
+  List<Map<String, dynamic>> _listingsData = []; // Data from food_listings + users
+  bool _loading = false;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    // Fetch view data on init since RPC function may not be deployed
+    // Fetch data from tables on init
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchFromView();
+      _fetchUserListings();
     });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   void _nextPage() => setState(() => _offset += _limit);
   void _prevPage() => setState(() => _offset = (_offset - _limit).clamp(0, _offset));
 
-  /// Fetch data directly from the user_food_view (or fallback to food_listings)
-  Future<void> _fetchFromView() async {
-    setState(() => _loadingView = true);
+  void _performSearch(String searchTerm) {
+    setState(() {
+      _search = searchTerm;
+      _offset = 0; // Reset to first page when searching
+    });
+  }
+
+  void _resetFilters() {
+    _searchController.clear();
+    setState(() {
+      _statusFilter = null;
+      _offset = 0;
+      _search = '';
+    });
+  }
+
+  Widget _buildSearchSummary() {
+    final filteredData = _getFilteredData();
+    
+    List<String> activeFilters = [];
+    if (_search.isNotEmpty) {
+      activeFilters.add('Search: "$_search"');
+    }
+    if (_statusFilter != null) {
+      activeFilters.add('Status: $_statusFilter');
+    }
+    
+    return Row(
+      children: [
+        Icon(Icons.info_outline, size: 16, color: Colors.amber[700]),
+        SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            '${filteredData.length} listings found${activeFilters.isNotEmpty ? ' • ${activeFilters.join(' • ')}' : ''}',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              color: Colors.amber[800],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Map<String, dynamic>> _getFilteredData() {
+    // Apply search filter
+    var filtered = _listingsData.where((r) {
+      if (_search.isEmpty) return true;
+      final q = _search.toLowerCase();
+      final userName = (r['user_name'] ?? '').toString().toLowerCase();
+      final userEmail = (r['user_email'] ?? '').toString().toLowerCase();
+      final foodName = (r['food_name'] ?? '').toString().toLowerCase();
+      return userName.contains(q) || userEmail.contains(q) || foodName.contains(q);
+    }).toList();
+
+    // Apply status filter
+    if (_statusFilter != null) {
+      filtered = filtered.where((r) => r['status'] == _statusFilter).toList();
+    }
+
+    return filtered;
+  }
+
+  /// Fetch user listings data from tables (food_listings + users)
+  Future<void> _fetchUserListings() async {
+    setState(() => _loading = true);
     try {
-      // Try user_food_view first
-      try {
-        final response = await Supabase.instance.client
-            .from('user_food_view')
-            .select()
-            .order('created_at', ascending: _orderDir == 'asc');
-
-        debugPrint('Response from user_food_view: $response');
-
-        setState(() {
-          _viewData = List<Map<String, dynamic>>.from(response as List);
-          _loadingView = false;
-        });
-        return;
-      } catch (viewError) {
-        debugPrint('user_food_view not available: $viewError');
-        // Fall back to direct query
-      }
-
-      // Fallback: Query food_listings directly and join with users manually
-      final listings = await Supabase.instance.client
+      // Query food_listings with user data in a single efficient query
+      final response = await Supabase.instance.client
           .from('food_listings')
-          .select('id, title, description, status, posted_by, created_at')
+          .select('id, title, description, status, created_at, posted_by, users(first_name, last_name, email)')
           .order('created_at', ascending: _orderDir == 'asc');
 
-      debugPrint('Response from food_listings: $listings');
+      debugPrint('Response from food_listings: $response');
 
-      // Transform to match expected format
-      final List<Map<String, dynamic>> listingsData = 
-          List<Map<String, dynamic>>.from(listings as List);
-
-      // Fetch user details for each listing
-      final enrichedData = <Map<String, dynamic>>[];
-      for (final listing in listingsData) {
-        try {
-          final userId = listing['posted_by'];
-          if (userId != null) {
-            final user = await Supabase.instance.client
-                .from('users')
-                .select('id, email, first_name, last_name')
-                .eq('id', userId)
-                .maybeSingle();
-
-            enrichedData.add({
-              'food_listing_id': listing['id'],
-              'food_name': listing['title'],
-              'description': listing['description'],
-              'status': listing['status'],
-              'created_at': listing['created_at'],
-              'user_id': userId,
-              'user_name': user != null 
-                  ? '${user['first_name'] ?? ''} ${user['last_name'] ?? ''}'.trim()
-                  : 'Unknown User',
-              'user_email': user?['email'],
-            });
-          }
-        } catch (userError) {
-          debugPrint('Error fetching user for listing: $userError');
-          // Add listing without user info
-          enrichedData.add({
-            'food_listing_id': listing['id'],
-            'food_name': listing['title'],
-            'description': listing['description'],
-            'status': listing['status'],
-            'created_at': listing['created_at'],
-            'user_name': 'Unknown User',
-          });
-        }
+      // Transform to consistent format
+      final List<Map<String, dynamic>> enrichedData = [];
+      for (final listing in response as List<dynamic>) {
+        final user = listing['users'];
+        final userName = user != null 
+            ? '${user['first_name'] ?? ''} ${user['last_name'] ?? ''}'.trim()
+            : 'Unknown User';
+        
+        enrichedData.add({
+          'food_listing_id': listing['id'],
+          'food_name': listing['title'],
+          'description': listing['description'],
+          'status': listing['status'],
+          'created_at': listing['created_at'],
+          'user_id': listing['posted_by'],
+          'user_name': userName.isEmpty ? 'Unknown User' : userName,
+          'user_email': user?['email'] ?? '',
+        });
       }
 
       setState(() {
-        _viewData = enrichedData;
-        _loadingView = false;
+        _listingsData = enrichedData;
+        _loading = false;
       });
     } catch (e) {
-      debugPrint('Error fetching data: $e');
-      setState(() => _loadingView = false);
+      debugPrint('Error fetching user listings: $e');
+      setState(() => _loading = false);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to load listings. Please check database setup.'),
+          content: Text('Failed to load listings: $e'),
           action: SnackBarAction(
             label: 'Retry',
-            onPressed: _fetchFromView,
+            onPressed: _fetchUserListings,
           ),
         ),
       );
     }
   }
 
-  /// Call the stored function for a specific user (mainly for diagnostic / direct call demo)
-  Future<void> _callStoredProcedure(String userId) async {
-    try {
-      final response = await Supabase.instance.client.rpc(
-        'get_user_food_listings',
-        params: {'p_posted_by': userId},
-      );
 
-      debugPrint('RPC response: $response');
-
-      if (response == null) {
-        throw Exception('RPC returned null. Function might not exist or is misconfigured.');
-      }
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Stored function executed for user'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      debugPrint('Error calling stored function: $e');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Function error: $e')),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    final query = UserListingQuery(
-      postedBy: _selectedUserId,
-      status: _statusFilter,
-      limit: _limit,
-      offset: _offset,
-      orderBy: _orderBy,
-      orderDir: _orderDir,
-    );
-
-    final listingsAsync = ref.watch(userFoodListingsProvider(query));
 
     return Scaffold(
       appBar: AppBar(
@@ -183,263 +168,377 @@ class _UserListingsAnalyticsScreenState extends ConsumerState<UserListingsAnalyt
         title: Text('User Listings Analytics', style: GoogleFonts.poppins()),
         actions: [
           IconButton(
-            tooltip: 'Toggle Data Source',
-            icon: Icon(_viewMode == 'view' ? Icons.functions : Icons.table_view, color: Colors.black),
-            onPressed: () {
-              setState(() {
-                _viewMode = _viewMode == 'view' ? 'provider' : 'view';
-              });
-              if (_viewMode == 'view') _fetchFromView();
-            },
-          ),
-          IconButton(
             icon: Icon(Icons.refresh, color: Colors.black),
-            onPressed: () {
-              if (_viewMode == 'view') {
-                _fetchFromView();
-              } else {
-                final _ = ref.refresh(userFoodListingsProvider(query));
-              }
-            },
+            onPressed: _fetchUserListings,
+            tooltip: 'Refresh',
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Data source indicator
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            color: Colors.amber[50],
-            child: Row(
-              children: [
-                Icon(
-                  _viewMode == 'view' ? Icons.table_view : Icons.functions,
-                  size: 16,
-                  color: Colors.amber[900],
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Enhanced Search and Filters - Fixed height container
+            Container(
+              padding: const EdgeInsets.all(12.0),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Search bar row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: 'Search by user name, email, or food name...',
+                            prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: Icon(Icons.clear, color: Colors.grey[600]),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      _performSearch('');
+                                    },
+                                  )
+                                : null,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: Colors.grey[300]!),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: Colors.amber[700]!),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
+                          onChanged: (value) {
+                            // Real-time search with debouncing effect
+                            Future.delayed(Duration(milliseconds: 500), () {
+                              if (_searchController.text == value) {
+                                _performSearch(value);
+                              }
+                            });
+                          },
+                          onSubmitted: _performSearch,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () => _performSearch(_searchController.text),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.amber[700],
+                          foregroundColor: Colors.black,
+                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          minimumSize: Size(0, 40),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.search, size: 16),
+                            SizedBox(width: 4),
+                            Text('Search', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Filters and reset row
+                  Row(
+                    children: [
+                      Text('Filters:', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey[300]!),
+                          borderRadius: BorderRadius.circular(6),
+                          color: Colors.white,
+                        ),
+                        child: DropdownButton<String?>(
+                          value: _statusFilter,
+                          hint: Text('All Status', style: GoogleFonts.poppins(fontSize: 12)),
+                          underline: SizedBox.shrink(),
+                          isDense: true,
+                          items: <String?>[null, 'available', 'claimed', 'removed']
+                              .map((s) => DropdownMenuItem(
+                                    value: s,
+                                    child: Text(s ?? 'All Status', style: GoogleFonts.poppins(fontSize: 12)),
+                                  ))
+                              .toList(),
+                          onChanged: (v) => setState(() { 
+                            _statusFilter = v; 
+                            _offset = 0; 
+                          }),
+                        ),
+                      ),
+                      const Spacer(),
+                      ElevatedButton.icon(
+                        onPressed: _resetFilters,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange[600],
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          minimumSize: Size(0, 32),
+                        ),
+                        icon: Icon(Icons.clear_all, size: 14),
+                        label: Text('Reset', style: GoogleFonts.poppins(fontSize: 12)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            
+            // Search results summary
+            if (_search.isNotEmpty || _statusFilter != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.amber[50],
+                  border: Border(bottom: BorderSide(color: Colors.amber[200]!)),
                 ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _viewMode == 'view' 
-                        ? 'Data Source: SQL VIEW (user_food_view) - Direct table query'
-                        : 'Data Source: SQL FUNCTION (get_user_food_listings) - Note: Function must be deployed to Supabase',
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.amber[900],
+                child: _buildSearchSummary(),
+              ),
+            
+            // Main content - Takes remaining space
+            Expanded(
+              child: _buildListingsData(),
+            ),
+            
+            // Pagination controls - Fixed at bottom
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                border: Border(top: BorderSide(color: Colors.grey[200]!)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Showing ${_offset + 1}-${(_offset + _limit).clamp(0, _getFilteredData().length)} of ${_getFilteredData().length}',
+                      style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600]),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          // Filters
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Search by user name or email',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      isDense: true,
-                    ),
-                    onSubmitted: (v) => setState(() { _search = v.trim(); _offset = 0; }),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        tooltip: 'Previous Page',
+                        icon: const Icon(Icons.chevron_left),
+                        onPressed: _offset == 0 ? null : _prevPage,
+                        style: IconButton.styleFrom(
+                          backgroundColor: _offset == 0 ? Colors.grey[100] : Colors.amber[100],
+                          foregroundColor: _offset == 0 ? Colors.grey[400] : Colors.amber[700],
+                          minimumSize: Size(32, 32),
+                          padding: EdgeInsets.zero,
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(
+                          'Page ${(_offset / _limit).floor() + 1}',
+                          style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Next Page',
+                        icon: const Icon(Icons.chevron_right),
+                        onPressed: _getFilteredData().length <= _offset + _limit ? null : _nextPage,
+                        style: IconButton.styleFrom(
+                          backgroundColor: _getFilteredData().length <= _offset + _limit ? Colors.grey[100] : Colors.amber[100],
+                          foregroundColor: _getFilteredData().length <= _offset + _limit ? Colors.grey[400] : Colors.amber[700],
+                          minimumSize: Size(32, 32),
+                          padding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                DropdownButton<String?>(
-                  value: _statusFilter,
-                  hint: Text('Status'),
-                  items: <String?>[null, 'available', 'removed', 'claimed', 'completed']
-                      .map((s) => DropdownMenuItem(value: s, child: Text(s ?? 'All')))
-                      .toList(),
-                  onChanged: (v) => setState(() { _statusFilter = v; _offset = 0; }),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: () => setState(() { _selectedUserId = null; _offset = 0; _search = ''; }),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[600]),
-                  child: Text('Reset', style: GoogleFonts.poppins()),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          // Main content based on mode
-          Expanded(
-            child: _viewMode == 'view'
-                ? _buildViewData()
-                : _buildProviderData(listingsAsync),
-          ),
-          // Pagination controls
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-            child: Row(
-              children: [
-                Text('Rows $_offset - ${_offset + _limit}', style: GoogleFonts.poppins(fontSize: 12)),
-                const Spacer(),
-                IconButton(
-                  tooltip: 'Previous Page',
-                  icon: const Icon(Icons.chevron_left),
-                  onPressed: _offset == 0 ? null : _prevPage,
-                ),
-                IconButton(
-                  tooltip: 'Next Page',
-                  icon: const Icon(Icons.chevron_right),
-                  onPressed: () {
-                    if (_viewMode == 'view') {
-                      if (_viewData.length >= _offset + _limit) _nextPage();
-                    } else {
-                      _nextPage();
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildViewData() {
-    if (_loadingView) {
+  Widget _buildListingsData() {
+    if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final filtered = _viewData.where((r) {
-      if (_search.isEmpty) return true;
-      final q = _search.toLowerCase();
-      final userName = (r['user_name'] ?? '').toString().toLowerCase();
-      return userName.contains(q);
-    }).toList();
+    // Use centralized filtering logic
+    final filteredData = _getFilteredData();
 
-    if (filtered.isEmpty) {
+    if (filteredData.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.table_view, size: 64, color: Colors.grey[400]),
+            Icon(Icons.fastfood_outlined, size: 64, color: Colors.grey[400]),
             SizedBox(height: 16),
-            Text('No results from view', style: GoogleFonts.poppins(color: Colors.grey[600])),
-            SizedBox(height: 8),
-            ElevatedButton.icon(
-              onPressed: _fetchFromView,
-              icon: Icon(Icons.refresh),
-              label: Text('Refresh'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.amber[700]),
+            Text(
+              _search.isNotEmpty || _statusFilter != null 
+                  ? 'No listings match your search criteria' 
+                  : 'No listings found',
+              style: GoogleFonts.poppins(color: Colors.grey[600]),
             ),
+            SizedBox(height: 8),
+            if (_search.isNotEmpty || _statusFilter != null)
+              ElevatedButton.icon(
+                onPressed: _resetFilters,
+                icon: Icon(Icons.clear_all),
+                label: Text('Clear Filters'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[600]),
+              )
+            else
+              ElevatedButton.icon(
+                onPressed: _fetchUserListings,
+                icon: Icon(Icons.refresh),
+                label: Text('Refresh'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.amber[700]),
+              ),
           ],
         ),
       );
     }
 
-    final page = filtered.skip(_offset).take(_limit).toList();
+    // Apply pagination
+    final page = filteredData.skip(_offset).take(_limit).toList();
 
     return ListView.separated(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(8),
       itemCount: page.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, i) => _buildListingCard(page[i], isFromView: true),
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, i) => _buildListingCard(page[i]),
     );
   }
 
-  Widget _buildProviderData(AsyncValue<List<Map<String, dynamic>>> listingsAsync) {
-    return listingsAsync.when(
-      data: (rows) {
-        final filtered = rows.where((r) {
-          if (_search.isEmpty) return true;
-          final q = _search.toLowerCase();
-          final email = (r['user_email'] ?? '').toString().toLowerCase();
-          final fn = (r['user_first_name'] ?? '').toString().toLowerCase();
-          final ln = (r['user_last_name'] ?? '').toString().toLowerCase();
-          return email.contains(q) || fn.contains(q) || ln.contains(q);
-        }).toList();
-
-        if (filtered.isEmpty) {
-          return Center(child: Text('No results', style: GoogleFonts.poppins()));
-        }
-
-        final page = filtered.skip(_offset).take(_limit).toList();
-
-        return ListView.separated(
-          padding: const EdgeInsets.all(12),
-          itemCount: page.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, i) => _buildListingCard(page[i], isFromView: false),
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, st) => Center(child: Text('Failed: $e', style: GoogleFonts.poppins())),
-    );
-  }
-
-  Widget _buildListingCard(Map<String, dynamic> r, {required bool isFromView}) {
+  Widget _buildListingCard(Map<String, dynamic> r) {
     final foodName = (r['food_name'] ?? '').toString();
-    final description = isFromView
-        ? (r['description'] ?? '').toString()
-        : (r['food_description'] ?? '').toString();
-    final userName = isFromView
-        ? (r['user_name'] ?? '').toString()
-        : '${r['user_first_name'] ?? ''} ${r['user_last_name'] ?? ''}'.trim();
-    final userEmail = isFromView ? '' : (r['user_email'] ?? '').toString();
+    final description = (r['description'] ?? '').toString();
+    final userName = (r['user_name'] ?? '').toString();
+    final userEmail = (r['user_email'] ?? '').toString();
     final status = (r['status'] ?? 'available').toString();
     final createdAt = (r['created_at'] ?? '').toString();
 
+    // Parse and format date
+    String formattedDate = createdAt;
+    try {
+      final date = DateTime.parse(createdAt);
+      formattedDate = '${date.day}/${date.month}/${date.year}';
+    } catch (e) {
+      // Keep original if parsing fails
+    }
+
     return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.grey[200]!),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 6)),
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4, offset: const Offset(0, 2)),
         ],
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(12),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(foodName, style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: status == 'removed' ? Colors.red[50] : Colors.green[50],
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: (status == 'removed' ? Colors.red[200] : Colors.green[200])!),
-              ),
-              child: Text(
-                status.isEmpty ? 'unknown' : status,
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: status == 'removed' ? Colors.red[700] : Colors.green[700],
-                ),
-              ),
-            ),
-          ],
-        ),
-        subtitle: Column(
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(description, maxLines: 2, overflow: TextOverflow.ellipsis, style: GoogleFonts.poppins()),
-            const SizedBox(height: 6),
-            Text(
-              'By: $userName${userEmail.isNotEmpty ? ' — $userEmail' : ''}',
-              style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[700]),
+            // Title and Status Row
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    foodName,
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(status).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _getStatusColor(status).withOpacity(0.3)),
+                  ),
+                  child: Text(
+                    status.isEmpty ? 'unknown' : status,
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: _getStatusColor(status),
+                    ),
+                  ),
+                ),
+              ],
             ),
+            
             const SizedBox(height: 6),
-            Text(createdAt, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600])),
+            
+            // Description
+            if (description.isNotEmpty)
+              Text(
+                description,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]),
+              ),
+            
+            const SizedBox(height: 6),
+            
+            // User info and date in one row
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'By: $userName${userEmail.isNotEmpty ? ' • $userEmail' : ''}',
+                    style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[700]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Text(
+                  formattedDate,
+                  style: GoogleFonts.poppins(fontSize: 10, color: Colors.grey[500]),
+                ),
+              ],
+            ),
           ],
         ),
-        onTap: isFromView && r['user_id'] != null
-            ? () => _callStoredProcedure(r['user_id'].toString())
-            : null,
       ),
     );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'removed':
+        return Colors.red[700]!;
+      case 'claimed':
+        return Colors.orange[700]!;
+      case 'available':
+        return Colors.green[700]!;
+      default:
+        return Colors.grey[600]!;
+    }
   }
 }

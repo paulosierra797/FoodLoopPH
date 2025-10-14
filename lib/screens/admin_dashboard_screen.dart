@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'admin/manage_users_screen.dart';
-import 'admin/review_listings_screen.dart';
 import 'admin/user_listings_analytics.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -15,9 +14,7 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool _loading = false;
-  int? _pendingListings;
   int? _totalUsers;
-  int? _reports;
   int? _totalPosts;
   List<Map<String, dynamic>> _recentListings = [];
 
@@ -74,34 +71,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Future<void> _loadStats() async {
     setState(() => _loading = true);
     final supabase = Supabase.instance.client;
-    int? pending;
     int? users;
-    int? reports;
     int? posts;
-    try {
-      // Attempt simple counts. Adjust table/column names as needed.
-    // NOTE: Original code queried a non-existent 'listings' table causing 404.
-    // The actual table elsewhere in the codebase is 'food_listings'.
-    final pendingRows = await supabase
-      .from('food_listings')
-      .select('id')
-      .eq('status', 'pending');
-      pending = (pendingRows as List).length;
-    } catch (_) {
-      pending = null;
-    }
     try {
       final userRows = await supabase.from('users').select('id');
       users = (userRows as List).length;
     } catch (_) {
       users = null;
-    }
-    try {
-      // If you have a reports/flags table, read it; else leave null
-      final reportRows = await supabase.from('reports').select('id');
-      reports = (reportRows as List).length;
-    } catch (_) {
-      reports = null;
     }
     try {
       final postRows = await supabase.from('food_listings').select('id');
@@ -121,9 +97,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
     if (!mounted) return;
     setState(() {
-      _pendingListings = pending;
       _totalUsers = users;
-      _reports = reports;
       _totalPosts = posts;
       _loading = false;
     });
@@ -132,7 +106,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final amber = Colors.amber[700]!;
-    final subtitle = 'Manage the community, users, and listings in one place';
+    final subtitle = 'Manage the users, and listings in one place';
 
     return Scaffold(
       appBar: AppBar(
@@ -256,22 +230,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                     children: [
                       _KpiCard(
-                        label: 'Listings Pending',
-                        value: _loading ? null : (_pendingListings?.toString() ?? '—'),
-                        icon: Icons.pending_actions,
-                        color: Colors.orange[400]!,
-                      ),
-                      _KpiCard(
                         label: 'Total Users',
                         value: _loading ? null : (_totalUsers?.toString() ?? '—'),
                         icon: Icons.people_alt_outlined,
                         color: Colors.teal[400]!,
-                      ),
-                      _KpiCard(
-                        label: 'Reports',
-                        value: _loading ? null : (_reports?.toString() ?? '—'),
-                        icon: Icons.report_gmailerrorred_outlined,
-                        color: Colors.red[400]!,
                       ),
                       _KpiCard(
                         label: 'Total Posts',
@@ -299,11 +261,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     runSpacing: 12,
                     children: [
                       _QuickAction(
-                        icon: Icons.shield_outlined,
-                        label: 'Moderate\nListings',
-                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReviewListingsScreen())),
-                      ),
-                      _QuickAction(
                         icon: Icons.manage_accounts_outlined,
                         label: 'Manage\nUsers',
                         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ManageUsersScreen())),
@@ -313,43 +270,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         label: 'User\nListings',
                         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UserListingsAnalyticsScreen())),
                       ),
-                      _QuickAction(
-                        icon: Icons.notifications_active_outlined,
-                        label: 'Send\nNotification',
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notifications page coming soon')));
-                        },
-                      ),
                     ],
                   ),
                 ),
 
-                // Info tiles
-                const SizedBox(height: 18),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _InfoCard(
-                          title: 'Moderation Tips',
-                          subtitle: 'Keep the feed clean. Remove unwanted or inappropriate posts promptly.',
-                          color: Colors.orange[100]!,
-                          icon: Icons.tips_and_updates_outlined,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _InfoCard(
-                          title: 'User Reports',
-                          subtitle: 'Review user reports regularly to maintain a safe community.',
-                          color: Colors.teal[100]!,
-                          icon: Icons.policy_outlined,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+
 
                 // Recent Food Listings
                 const SizedBox(height: 18),
@@ -594,59 +519,3 @@ class _QuickAction extends StatelessWidget {
   }
 }
 
-class _InfoCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final Color color;
-  final IconData icon;
-
-  const _InfoCard({
-    required this.title,
-    required this.subtitle,
-    required this.color,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[200]!),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: Colors.black87),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
-                const SizedBox(height: 6),
-                Text(subtitle, style: GoogleFonts.poppins(color: Colors.grey[700], height: 1.3)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
