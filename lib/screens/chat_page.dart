@@ -44,11 +44,12 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> _loadMessages() async {
     try {
       setState(() => _isLoading = true);
-      
+
       final currentUserId = _supabase.auth.currentUser?.id;
       if (currentUserId == null) return;
 
-      final response = await _supabase.rpc('get_conversation_messages', params: {
+      final response =
+          await _supabase.rpc('get_conversation_messages', params: {
         'user_id': currentUserId,
         'other_user_id': widget.otherUserId,
         'listing_id_param': widget.listingId,
@@ -86,9 +87,11 @@ class _ChatPageState extends State<ChatPage> {
             final newMessage = payload.newRecord;
             final senderId = newMessage['sender_id'];
             final receiverId = newMessage['receiver_id'];
-            
-            if ((senderId == currentUserId && receiverId == widget.otherUserId) ||
-                (senderId == widget.otherUserId && receiverId == currentUserId)) {
+
+            if ((senderId == currentUserId &&
+                    receiverId == widget.otherUserId) ||
+                (senderId == widget.otherUserId &&
+                    receiverId == currentUserId)) {
               _loadMessages(); // Reload messages when new message arrives
             }
           },
@@ -113,8 +116,8 @@ class _ChatPageState extends State<ChatPage> {
               radius: 20,
               backgroundColor: Colors.amber[100],
               child: Text(
-                widget.otherUserName.isNotEmpty 
-                    ? widget.otherUserName[0].toUpperCase() 
+                widget.otherUserName.isNotEmpty
+                    ? widget.otherUserName[0].toUpperCase()
                     : 'U',
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w600,
@@ -215,11 +218,11 @@ class _ChatPageState extends State<ChatPage> {
   Widget _buildMessage(Map<String, dynamic> message) {
     final currentUserId = _supabase.auth.currentUser?.id;
     bool isMe = message['sender_id'] == currentUserId;
-    
+
     final messageText = message['message_text']?.toString() ?? '';
     final senderName = message['sender_name']?.toString() ?? 'Unknown';
-    final timestamp = message['timestamp'] != null 
-        ? DateTime.parse(message['timestamp']) 
+    final timestamp = message['timestamp'] != null
+        ? DateTime.parse(message['timestamp'])
         : DateTime.now();
 
     return Container(
@@ -357,7 +360,7 @@ class _ChatPageState extends State<ChatPage> {
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              icon: _isSending 
+              icon: _isSending
                   ? SizedBox(
                       width: 20,
                       height: 20,
@@ -385,7 +388,8 @@ class _ChatPageState extends State<ChatPage> {
       final currentUserId = _supabase.auth.currentUser?.id;
       if (currentUserId == null) return;
 
-      debugPrint('Sending message with params: sender_id=$currentUserId, receiver_id=${widget.otherUserId}, message_text=$messageText, listing_id=${widget.listingId}');
+      debugPrint(
+          'Sending message with params: sender_id=$currentUserId, receiver_id=${widget.otherUserId}, message_text=$messageText, listing_id=${widget.listingId}');
 
       await _supabase.rpc('send_message', params: {
         'sender_id': currentUserId,
@@ -396,7 +400,6 @@ class _ChatPageState extends State<ChatPage> {
 
       _messageController.clear();
       await _loadMessages(); // Reload messages to show the new one
-      
     } catch (e) {
       debugPrint('Error sending message: $e');
       if (mounted) {
@@ -454,8 +457,6 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-
-
   String _formatTime(DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
@@ -473,5 +474,3 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 }
-
-
