@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class ChatPage extends StatefulWidget {
   final String otherUserId;
@@ -26,11 +29,47 @@ class _ChatPageState extends State<ChatPage> {
   List<Map<String, dynamic>> _messages = [];
   bool _isLoading = true;
   bool _isSending = false;
+  String? _otherUserProfileImage;
+  String? _currentUserProfileImage;
   @override
   void initState() {
     super.initState();
     _loadMessages();
     _setupRealtimeSubscription();
+    _loadUserProfileImage();
+  }
+
+  Future<void> _loadUserProfileImage() async {
+    try {
+      final currentUserId = _supabase.auth.currentUser?.id;
+      
+      // Load other user's profile image
+      final otherUserResponse = await _supabase
+          .from('users')
+          .select('profile_picture')
+          .eq('id', widget.otherUserId)
+          .single();
+
+      // Load current user's profile image
+      String? currentUserImage;
+      if (currentUserId != null) {
+        final currentUserResponse = await _supabase
+            .from('users')
+            .select('profile_picture')
+            .eq('id', currentUserId)
+            .single();
+        currentUserImage = currentUserResponse['profile_picture']?.toString();
+      }
+
+      if (mounted) {
+        setState(() {
+          _otherUserProfileImage = otherUserResponse['profile_picture']?.toString();
+          _currentUserProfileImage = currentUserImage;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading user profile images: $e');
+    }
   }
 
   @override
@@ -112,15 +151,20 @@ class _ChatPageState extends State<ChatPage> {
             CircleAvatar(
               radius: 20,
               backgroundColor: Colors.amber[100],
-              child: Text(
-                widget.otherUserName.isNotEmpty 
-                    ? widget.otherUserName[0].toUpperCase() 
-                    : 'U',
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600,
-                  color: Colors.amber[800],
-                ),
-              ),
+              backgroundImage: _otherUserProfileImage != null 
+                  ? NetworkImage(_otherUserProfileImage!) 
+                  : null,
+              child: _otherUserProfileImage == null
+                  ? Text(
+                      widget.otherUserName.isNotEmpty 
+                          ? widget.otherUserName[0].toUpperCase() 
+                          : 'U',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.amber[800],
+                      ),
+                    )
+                  : null,
             ),
             SizedBox(width: 12),
             Expanded(
@@ -218,6 +262,7 @@ class _ChatPageState extends State<ChatPage> {
     
     final messageText = message['message_text']?.toString() ?? '';
     final senderName = message['sender_name']?.toString() ?? 'Unknown';
+    final senderProfileImage = message['sender_profile_image']?.toString();
     final timestamp = message['timestamp'] != null 
         ? DateTime.parse(message['timestamp']) 
         : DateTime.now();
@@ -233,14 +278,19 @@ class _ChatPageState extends State<ChatPage> {
             CircleAvatar(
               radius: 16,
               backgroundColor: Colors.amber[100],
-              child: Text(
-                senderName.isNotEmpty ? senderName[0].toUpperCase() : 'U',
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600,
-                  color: Colors.amber[800],
-                  fontSize: 12,
-                ),
-              ),
+              backgroundImage: senderProfileImage != null 
+                  ? NetworkImage(senderProfileImage) 
+                  : null,
+              child: senderProfileImage == null
+                  ? Text(
+                      senderName.isNotEmpty ? senderName[0].toUpperCase() : 'U',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.amber[800],
+                        fontSize: 12,
+                      ),
+                    )
+                  : null,
             ),
             SizedBox(width: 8),
           ],
@@ -304,7 +354,12 @@ class _ChatPageState extends State<ChatPage> {
             CircleAvatar(
               radius: 16,
               backgroundColor: Colors.amber[600],
-              child: Icon(Icons.person, size: 18, color: Colors.white),
+              backgroundImage: _currentUserProfileImage != null 
+                  ? NetworkImage(_currentUserProfileImage!) 
+                  : null,
+              child: _currentUserProfileImage == null
+                  ? Icon(Icons.person, size: 18, color: Colors.white)
+                  : null,
             ),
           ],
         ],
@@ -433,25 +488,205 @@ class _ChatPageState extends State<ChatPage> {
               ),
             ),
             ListTile(
-              leading: Icon(Icons.info_outline),
+              leading: Icon(Icons.info_outline, color: Colors.amber[600]),
               title: Text('View Profile', style: GoogleFonts.poppins()),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: Icon(Icons.block),
-              title: Text('Block User', style: GoogleFonts.poppins()),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: Icon(Icons.report),
-              title: Text('Report', style: GoogleFonts.poppins()),
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                Navigator.pop(context);
+                _showUserProfile(context);
+              },
             ),
             SizedBox(height: 20),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _showUserProfile(BuildContext context) async {
+    try {
+      // Fetch user details from database
+      final response = await _supabase
+          .from('users')
+          .select('id, first_name, last_name, username, email, created_at, profile_picture')
+          .eq('id', widget.otherUserId)
+          .single();
+
+      final userData = Map<String, dynamic>.from(response);
+      _displayUserProfileDialog(context, userData);
+    } catch (e) {
+      debugPrint('Error fetching user profile: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to load user profile'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _displayUserProfileDialog(BuildContext context, Map<String, dynamic> userData) {
+    final firstName = userData['first_name']?.toString() ?? '';
+    final lastName = userData['last_name']?.toString() ?? '';
+    final username = userData['username']?.toString() ?? '';
+    final email = userData['email']?.toString() ?? '';
+    final profileImageUrl = userData['profile_picture']?.toString();
+    final createdAt = userData['created_at'] != null 
+        ? DateTime.parse(userData['created_at']) 
+        : null;
+
+    final fullName = '$firstName $lastName'.trim();
+    final displayName = fullName.isNotEmpty ? fullName : username;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          contentPadding: EdgeInsets.zero,
+          content: Container(
+            width: MediaQuery.of(context).size.width * 0.8,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: Colors.white,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header with avatar
+                Container(
+                  padding: EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.amber[50],
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                  ),
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 40,
+                        backgroundColor: Colors.amber[100],
+                        backgroundImage: profileImageUrl != null 
+                            ? NetworkImage(profileImageUrl) 
+                            : null,
+                        child: profileImageUrl == null
+                            ? Text(
+                                displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.amber[800],
+                                ),
+                              )
+                            : null,
+                      ),
+                      SizedBox(height: 12),
+                      Text(
+                        displayName,
+                        style: GoogleFonts.poppins(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      if (username.isNotEmpty && username != displayName) ...[
+                        SizedBox(height: 4),
+                        Text(
+                          '@$username',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                
+                // User details
+                Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      _buildProfileDetailRow(Icons.email, 'Email', email),
+                      SizedBox(height: 16),
+                      _buildProfileDetailRow(
+                        Icons.calendar_today, 
+                        'Member since', 
+                        createdAt != null ? _formatDate(createdAt) : 'Unknown'
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Close button
+                Padding(
+                  padding: EdgeInsets.only(bottom: 16),
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.amber[600],
+                      padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(
+                      'Close',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileDetailRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: Colors.amber[600]),
+        SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(height: 2),
+              Text(
+                value,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatDate(DateTime dateTime) {
+    final months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    
+    return '${months[dateTime.month - 1]} ${dateTime.year}';
   }
 
 

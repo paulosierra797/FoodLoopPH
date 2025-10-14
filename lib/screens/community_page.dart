@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../providers/user_service_provider.dart';
 
 // Comment model
@@ -9,6 +12,7 @@ class PostComment {
   final String id;
   final String author;
   final String authorAvatar;
+  final String? authorProfilePicture;
   final String content;
   final DateTime timestamp;
   final Map<String, int> reactions;
@@ -17,6 +21,7 @@ class PostComment {
     required this.id,
     required this.author,
     required this.authorAvatar,
+    this.authorProfilePicture,
     required this.content,
     required this.timestamp,
     required this.reactions,
@@ -29,6 +34,7 @@ class CommunityPost {
   final String userId; // Add user_id to identify post owner
   final String author;
   final String authorAvatar;
+  final String? authorProfilePicture; // Add profile picture
   final String category;
   final String content;
   final List<String>? imagePaths;
@@ -42,6 +48,7 @@ class CommunityPost {
     required this.userId,
     required this.author,
     required this.authorAvatar,
+    this.authorProfilePicture,
     required this.category,
     required this.content,
     this.imagePaths,
@@ -63,28 +70,43 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
   final SupabaseClient supabase = Supabase.instance.client;
   String selectedCategory = 'All';
   List<CommunityPost> posts = [];
-  Map<String, String> userCache = {}; // Cache for user ID to name mapping
+  Map<String, String?> userCache = {}; // Cache for user ID to name and profile picture mapping
+  String? _currentUserProfilePicture;
 
   @override
   void initState() {
     super.initState();
     _fetchPosts();
+    _loadCurrentUserProfilePicture();
   }
 
-  // Get user display name from cache or fetch from database
-  Future<String> _getUserDisplayName(String userId) async {
-    debugPrint('🔍 Getting display name for user ID: $userId');
+  Future<void> _loadCurrentUserProfilePicture() async {
+    final currentUser = supabase.auth.currentUser;
+    if (currentUser != null) {
+      final userInfo = await _getUserInfo(currentUser.id);
+      setState(() {
+        _currentUserProfilePicture = userInfo['profile_picture'];
+      });
+    }
+  }
 
-    if (userCache.containsKey(userId)) {
-      debugPrint('✅ Found in cache: ${userCache[userId]}');
-      return userCache[userId]!;
+  // Get user display name and profile picture from cache or fetch from database
+  Future<Map<String, String?>> _getUserInfo(String userId) async {
+    debugPrint('🔍 Getting user info for user ID: $userId');
+
+    if (userCache.containsKey('${userId}_name')) {
+      debugPrint('✅ Found in cache: ${userCache['${userId}_name']}');
+      return {
+        'name': userCache['${userId}_name'],
+        'profile_picture': userCache['${userId}_picture'],
+      };
     }
 
     try {
       debugPrint('📡 Fetching from database...');
       final response = await supabase
           .from('users')
-          .select('first_name, last_name, username')
+          .select('first_name, last_name, username, profile_picture')
           .eq('id', userId)
           .maybeSingle();
 
@@ -94,9 +116,10 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
         final firstName = response['first_name'] ?? '';
         final lastName = response['last_name'] ?? '';
         final username = response['username'] ?? '';
+        final profilePicture = response['profile_picture']?.toString();
 
         debugPrint(
-            '👤 User data - First: $firstName, Last: $lastName, Username: $username');
+            '👤 User data - First: $firstName, Last: $lastName, Username: $username, Profile: $profilePicture');
 
         String displayName;
         if (firstName.isNotEmpty || lastName.isNotEmpty) {
@@ -108,16 +131,32 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
         }
 
         debugPrint('✅ Final display name: $displayName');
-        userCache[userId] = displayName;
-        return displayName;
+        userCache['${userId}_name'] = displayName;
+        userCache['${userId}_picture'] = profilePicture;
+        
+        return {
+          'name': displayName,
+          'profile_picture': profilePicture,
+        };
       }
     } catch (e) {
-      debugPrint('❌ Error fetching user display name: $e');
+      debugPrint('❌ Error fetching user info: $e');
     }
 
     debugPrint('⚠️ Returning Unknown User for ID: $userId');
-    userCache[userId] = 'Unknown User';
-    return 'Unknown User';
+    userCache['${userId}_name'] = 'Unknown User';
+    userCache['${userId}_picture'] = null;
+    
+    return {
+      'name': 'Unknown User',
+      'profile_picture': null,
+    };
+  }
+
+  // Keep backward compatibility
+  Future<String> _getUserDisplayName(String userId) async {
+    final userInfo = await _getUserInfo(userId);
+    return userInfo['name'] ?? 'Unknown User';
   }
 
   Future<void> _fetchPosts() async {
@@ -134,29 +173,36 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
       for (var data in response as List<dynamic>) {
         debugPrint('📝 Processing post data: $data');
 
-        // Get author name for post - using user_id field from database
+        // Get author name and profile picture for post - using user_id field from database
         String userId = data['user_id']?.toString() ?? '';
         debugPrint('👤 Post user_id: "$userId"');
 
         String postAuthorName = 'Unknown User';
+        String? postAuthorProfilePicture;
         if (userId.isNotEmpty) {
-          postAuthorName = await _getUserDisplayName(userId);
+          final userInfo = await _getUserInfo(userId);
+          postAuthorName = userInfo['name'] ?? 'Unknown User';
+          postAuthorProfilePicture = userInfo['profile_picture'];
         } else {
           debugPrint('⚠️ Empty user_id for post: ${data['id']}');
         }
 
-        // Process comments and get user names
+        // Process comments and get user names and profile pictures
         final List<PostComment> processedComments = [];
         for (var comment in data['comments'] as List<dynamic>) {
           String commentUserId = comment['user_id']?.toString() ?? '';
           String commentAuthorName = 'Unknown User';
+          String? commentAuthorProfilePicture;
           if (commentUserId.isNotEmpty) {
-            commentAuthorName = await _getUserDisplayName(commentUserId);
+            final commentUserInfo = await _getUserInfo(commentUserId);
+            commentAuthorName = commentUserInfo['name'] ?? 'Unknown User';
+            commentAuthorProfilePicture = commentUserInfo['profile_picture'];
           }
           processedComments.add(PostComment(
             id: comment['id'],
             author: commentAuthorName,
-            authorAvatar: '👤',
+            authorAvatar: commentAuthorProfilePicture != null ? 'profile' : '👤',
+            authorProfilePicture: commentAuthorProfilePicture,
             content: comment['content'],
             timestamp: DateTime.parse(comment['created_at']),
             reactions: {},
@@ -184,6 +230,7 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
           userId: userId, // Store the user_id for authorization checks
           author: postAuthorName,
           authorAvatar: data['author_avatar'] ?? '👤',
+          authorProfilePicture: postAuthorProfilePicture,
           category: data['category'],
           content: data['content'],
           imagePaths: (data['images'] as List<dynamic>?)?.cast<String>(),
@@ -492,7 +539,12 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
                 CircleAvatar(
                   radius: 20,
                   backgroundColor: Colors.orange[100],
-                  child: Text('👤', style: TextStyle(fontSize: 16)),
+                  backgroundImage: _currentUserProfilePicture != null 
+                      ? NetworkImage(_currentUserProfilePicture!) 
+                      : null,
+                  child: _currentUserProfilePicture == null
+                      ? Text('👤', style: TextStyle(fontSize: 16))
+                      : null,
                 ),
                 SizedBox(width: 12),
                 Expanded(
@@ -565,8 +617,12 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
                 CircleAvatar(
                   radius: 20,
                   backgroundColor: Colors.orange[100],
-                  child:
-                      Text(post.authorAvatar, style: TextStyle(fontSize: 16)),
+                  backgroundImage: post.authorProfilePicture != null 
+                      ? NetworkImage(post.authorProfilePicture!) 
+                      : null,
+                  child: post.authorProfilePicture == null
+                      ? Text(post.authorAvatar, style: TextStyle(fontSize: 16))
+                      : null,
                 ),
                 SizedBox(width: 12),
                 Expanded(
@@ -806,7 +862,12 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
                 CircleAvatar(
                   radius: 16,
                   backgroundColor: Colors.grey[200],
-                  child: Text('👤', style: TextStyle(fontSize: 12)),
+                  backgroundImage: _currentUserProfilePicture != null 
+                      ? NetworkImage(_currentUserProfilePicture!) 
+                      : null,
+                  child: _currentUserProfilePicture == null
+                      ? Text('👤', style: TextStyle(fontSize: 12))
+                      : null,
                 ),
                 SizedBox(width: 8),
                 Expanded(
@@ -899,7 +960,12 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
           CircleAvatar(
             radius: 16,
             backgroundColor: Colors.grey[200],
-            child: Text(comment.authorAvatar, style: TextStyle(fontSize: 12)),
+            backgroundImage: comment.authorProfilePicture != null 
+                ? NetworkImage(comment.authorProfilePicture!) 
+                : null,
+            child: comment.authorProfilePicture == null
+                ? Text(comment.authorAvatar, style: TextStyle(fontSize: 12))
+                : null,
           ),
           SizedBox(width: 8),
           Expanded(
@@ -964,6 +1030,7 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
       backgroundColor: Colors.transparent,
       builder: (context) => CreatePostBottomSheet(
         userName: userDisplayName,
+        userProfilePicture: _currentUserProfilePicture,
         onPostCreated: (content, category, imagePaths) {
           _createPost(content, category, imagePaths);
         },
@@ -1109,9 +1176,14 @@ class CreatePostBottomSheet extends StatefulWidget {
   final Function(String content, String category, List<String> imagePaths)
       onPostCreated;
   final String userName;
+  final String? userProfilePicture;
 
-  const CreatePostBottomSheet(
-      {super.key, required this.onPostCreated, required this.userName});
+  const CreatePostBottomSheet({
+    super.key, 
+    required this.onPostCreated, 
+    required this.userName,
+    this.userProfilePicture,
+  });
 
   @override
   _CreatePostBottomSheetState createState() => _CreatePostBottomSheetState();
@@ -1194,7 +1266,12 @@ class _CreatePostBottomSheetState extends State<CreatePostBottomSheet> {
                   CircleAvatar(
                     radius: 20,
                     backgroundColor: Colors.orange[100],
-                    child: Text('👤', style: TextStyle(fontSize: 16)),
+                    backgroundImage: widget.userProfilePicture != null 
+                        ? NetworkImage(widget.userProfilePicture!) 
+                        : null,
+                    child: widget.userProfilePicture == null
+                        ? Text('👤', style: TextStyle(fontSize: 16))
+                        : null,
                   ),
                   SizedBox(width: 12),
                   Column(
@@ -1294,6 +1371,72 @@ class _CreatePostBottomSheetState extends State<CreatePostBottomSheet> {
                         ],
                       ],
                     ),
+
+                    // Image Preview Section
+                    if (selectedImages.isNotEmpty) ...[
+                      SizedBox(height: 12),
+                      Container(
+                        height: 100,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: selectedImages.length,
+                          itemBuilder: (context, index) {
+                            return Container(
+                              width: 100,
+                              height: 100,
+                              margin: EdgeInsets.only(right: 8),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.grey[300]!),
+                              ),
+                              child: Stack(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.file(
+                                      File(selectedImages[index]),
+                                      width: 100,
+                                      height: 100,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Container(
+                                          color: Colors.grey[200],
+                                          child: Icon(Icons.error, color: Colors.red),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 4,
+                                    right: 4,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          selectedImages.removeAt(index);
+                                        });
+                                      },
+                                      child: Container(
+                                        width: 24,
+                                        height: 24,
+                                        decoration: BoxDecoration(
+                                          color: Colors.red,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.close,
+                                          size: 16,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1304,17 +1447,140 @@ class _CreatePostBottomSheetState extends State<CreatePostBottomSheet> {
     );
   }
 
-  void _selectImage() {
-    // Simulate image selection
-    setState(() {
-      selectedImages.add('dummy_image_path');
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Image selected! (Simulated)'),
-        duration: Duration(seconds: 2),
-      ),
+  Future<void> _selectImage() async {
+    final ImagePicker picker = ImagePicker();
+    
+    // Show dialog to choose between camera and gallery
+    final ImageSource? source = await showDialog<ImageSource>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Select Image Source', style: GoogleFonts.poppins()),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.camera_alt, color: Colors.orange[600]),
+                title: Text('Camera', style: GoogleFonts.poppins()),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+              ListTile(
+                leading: Icon(Icons.photo_library, color: Colors.orange[600]),
+                title: Text('Gallery', style: GoogleFonts.poppins()),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: GoogleFonts.poppins()),
+            ),
+          ],
+        );
+      },
     );
+
+    if (source != null) {
+      try {
+        // Check and request permissions
+        bool hasPermission = false;
+        if (source == ImageSource.camera) {
+          final status = await Permission.camera.request();
+          hasPermission = status.isGranted;
+        } else {
+          // For gallery access, try multiple permission types for better compatibility
+          PermissionStatus status;
+          
+          debugPrint('Requesting gallery permissions...');
+          
+          // Try photos permission first (iOS and newer Android)
+          status = await Permission.photos.request();
+          debugPrint('Photos permission status: $status');
+          if (status.isGranted) {
+            hasPermission = true;
+          } else {
+            // Fallback to storage permission for older Android versions
+            status = await Permission.storage.request();
+            debugPrint('Storage permission status: $status');
+            hasPermission = status.isGranted;
+          }
+          
+          // If still not granted, try media library permission
+          if (!hasPermission) {
+            status = await Permission.mediaLibrary.request();
+            debugPrint('Media library permission status: $status');
+            hasPermission = status.isGranted;
+          }
+          
+          debugPrint('Final gallery permission result: $hasPermission');
+        }
+
+        if (!hasPermission && source == ImageSource.camera) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Camera permission denied. Please enable camera access in settings.'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 4),
+              action: SnackBarAction(
+                label: 'Settings',
+                textColor: Colors.white,
+                onPressed: () => openAppSettings(),
+              ),
+            ),
+          );
+          return;
+        }
+        
+        // For gallery, try to proceed even without explicit permission
+        // as the system gallery picker may work without it
+
+        XFile? pickedFile;
+        
+        try {
+          pickedFile = await picker.pickImage(
+            source: source,
+            maxWidth: 1024,
+            maxHeight: 1024,
+            imageQuality: 80,
+          );
+        } catch (e) {
+          debugPrint('Error with image picker: $e');
+          // If image picker fails, try with different parameters
+          try {
+            pickedFile = await picker.pickImage(
+              source: source,
+              imageQuality: 80,
+            );
+          } catch (e2) {
+            debugPrint('Second attempt failed: $e2');
+            throw Exception('Failed to access ${source == ImageSource.camera ? 'camera' : 'gallery'}: $e2');
+          }
+        }
+
+        if (pickedFile != null) {
+          setState(() {
+            selectedImages.add(pickedFile!.path);
+          });
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Image selected successfully!'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to select image: $e'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 }
 
@@ -1424,7 +1690,12 @@ class _EditPostBottomSheetState extends State<EditPostBottomSheet> {
                   CircleAvatar(
                     radius: 20,
                     backgroundColor: Colors.orange[100],
-                    child: Text('👤', style: TextStyle(fontSize: 16)),
+                    backgroundImage: widget.post.authorProfilePicture != null 
+                        ? NetworkImage(widget.post.authorProfilePicture!) 
+                        : null,
+                    child: widget.post.authorProfilePicture == null
+                        ? Text('👤', style: TextStyle(fontSize: 16))
+                        : null,
                   ),
                   SizedBox(width: 12),
                   Column(
