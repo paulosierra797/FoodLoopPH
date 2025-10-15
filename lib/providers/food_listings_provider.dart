@@ -2,6 +2,23 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+// Real-time food listings provider using StreamProvider
+final foodListingsStreamProvider =
+    StreamProvider<List<Map<String, dynamic>>>((ref) {
+  final supabase = Supabase.instance.client;
+
+  return supabase
+      .from('food_listings')
+      .stream(primaryKey: ['id'])
+      .order('created_at', ascending: false)
+      .map((data) {
+        debugPrint(
+            'Real-time food listings update received: ${data.length} items');
+        return List<Map<String, dynamic>>.from(data);
+      });
+});
+
+// Keep the original FutureProvider for backward compatibility
 final foodListingsProvider =
     FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final supabase = Supabase.instance.client;

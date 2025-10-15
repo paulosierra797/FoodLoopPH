@@ -54,7 +54,21 @@ class UserService extends ChangeNotifier {
         print(
             '🖼️ syncUserFromSupabase: profile_picture from DB: ${data['profile_picture']}');
       } else {
-        print('⚠️ syncUserFromSupabase: No database response received');
+        print(
+            '⚠️ syncUserFromSupabase: No database response received - user not in database');
+        // User is authenticated but not in users table - create them
+        await _ensureUserExistsInDatabase();
+        // Try fetching again after creation
+        final retryResp = await supabase
+            .from('users')
+            .select()
+            .eq('id', authUser.id)
+            .maybeSingle();
+        if (retryResp != null) {
+          data = Map<String, dynamic>.from(retryResp as Map);
+          print(
+              '✅ syncUserFromSupabase: User created and fetched successfully');
+        }
       }
     } catch (e) {
       debugPrint(
@@ -96,6 +110,48 @@ class UserService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Ensure user exists in database (create if missing)
+  Future<void> _ensureUserExistsInDatabase() async {
+    print('🔧 _ensureUserExistsInDatabase: Creating missing user record...');
+    final supabase = Supabase.instance.client;
+    final authUser = supabase.auth.currentUser;
+    if (authUser == null) return;
+
+    try {
+      final meta = authUser.userMetadata ?? {};
+
+      // Extract available information
+      final firstName = (meta['first_name'] ?? '').toString();
+      final lastName = (meta['last_name'] ?? '').toString();
+      final username = (meta['username'] ?? '').toString();
+      final email = authUser.email ?? '';
+      final phoneNumber = (meta['phone_number'] ?? '').toString();
+
+      print(
+          '📝 Creating user with data: firstName=$firstName, lastName=$lastName, username=$username, email=$email');
+
+      // Create user record in database
+      await supabase.from('users').insert({
+        'id': authUser.id,
+        'first_name': firstName.isEmpty ? 'User' : firstName,
+        'last_name': lastName.isEmpty ? authUser.id.substring(0, 8) : lastName,
+        'username':
+            username.isEmpty ? 'user_${authUser.id.substring(0, 8)}' : username,
+        'email': email,
+        'phone_number': phoneNumber,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      print('✅ _ensureUserExistsInDatabase: User record created successfully');
+    } catch (e) {
+      print('❌ _ensureUserExistsInDatabase: Failed to create user record: $e');
+      // If it fails due to duplicate key, that's fine - user already exists
+      if (!e.toString().contains('duplicate key')) {
+        rethrow;
+      }
+    }
+  }
+
   // Load user from local storage
   Future<void> _loadUserFromStorage() async {
     try {
@@ -121,6 +177,37 @@ class UserService extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('Error saving user to storage: $e');
+    }
+  }
+
+  // Ensure current authenticated user exists in database
+  Future<void> ensureCurrentUserInDatabase() async {
+    final supabase = Supabase.instance.client;
+    final authUser = supabase.auth.currentUser;
+
+    if (authUser == null) {
+      throw Exception('No authenticated user found');
+    }
+
+    print('🔍 Checking if user ${authUser.id} exists in database...');
+
+    try {
+      final existing = await supabase
+          .from('users')
+          .select('id')
+          .eq('id', authUser.id)
+          .maybeSingle();
+
+      if (existing == null) {
+        print('❌ User not found in database, creating...');
+        await _ensureUserExistsInDatabase();
+        await syncUserFromSupabase(); // Refresh local user data
+      } else {
+        print('✅ User already exists in database');
+      }
+    } catch (e) {
+      print('❌ Error checking/creating user: $e');
+      rethrow;
     }
   }
 

@@ -6,7 +6,6 @@ import '../providers/user_service_provider.dart';
 import '../providers/notifications_provider.dart';
 import '../services/database_notification_service.dart';
 import 'home_page.dart'; // Import to access tabNavigationProvider
-import 'home_page.dart';
 import 'explore_page_full.dart';
 import 'add_food_page.dart';
 import 'community_page.dart';

@@ -85,26 +85,49 @@ class _FoodLoopAppState extends State<FoodLoopApp> {
     // Handle Supabase auth callback
     if (uri.path.contains('/auth/callback')) {
       debugPrint('📧 Email verification callback detected');
+      debugPrint('🔗 Full URI: ${uri.toString()}');
 
       // Extract tokens: Supabase places them usually in the fragment but fall back to query params
       final Map<String, String> params = {};
       if (uri.fragment.isNotEmpty) {
+        debugPrint('📦 Fragment found: ${uri.fragment}');
         params.addAll(Uri.splitQueryString(uri.fragment));
       }
       if (uri.queryParameters.isNotEmpty) {
+        debugPrint('📦 Query params found: ${uri.queryParameters}');
         params.addAll(uri.queryParameters);
       }
+
+      debugPrint('🎫 All extracted params: $params');
 
       final accessToken = params['access_token'];
       final refreshToken = params['refresh_token'];
       final type = params['type']; // e.g. signup/email_verification/recovery
-      debugPrint(
-          '🎫 Token type: $type, has access: ${accessToken != null}, has refresh: ${refreshToken != null}');
+      final error = params['error'];
+      final errorDescription = params['error_description'];
+
+      debugPrint('🎫 Token type: $type');
+      debugPrint('🔑 Has access token: ${accessToken != null}');
+      debugPrint('🔄 Has refresh token: ${refreshToken != null}');
+
+      if (error != null) {
+        debugPrint('❌ Auth error: $error - $errorDescription');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Email verification failed: $errorDescription'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
 
       if (accessToken != null && refreshToken != null) {
         _handleEmailVerification(accessToken, refreshToken);
       } else {
         debugPrint('⚠️ Missing tokens in callback URL; cannot set session.');
+        debugPrint('🔍 Available params: ${params.keys.toList()}');
       }
     }
   }
@@ -112,11 +135,21 @@ class _FoodLoopAppState extends State<FoodLoopApp> {
   void _handleEmailVerification(String accessToken, String refreshToken) async {
     try {
       debugPrint('✉️ Processing email verification...');
+      debugPrint('🔑 Access token: ${accessToken.substring(0, 20)}...');
+      debugPrint('🔄 Refresh token: ${refreshToken.substring(0, 20)}...');
 
-      // Set the session with the tokens
-      await Supabase.instance.client.auth.setSession(refreshToken);
+      // Set the session with the refresh token
+      final response =
+          await Supabase.instance.client.auth.setSession(refreshToken);
 
-      debugPrint('✅ Email verification successful');
+      if (response.session != null) {
+        debugPrint(
+            '� Email confirmed at: ${response.session!.user.emailConfirmedAt}');
+        debugPrint('👤 User ID: ${response.session!.user.id}');
+        debugPrint('✅ Email verification successful - session established');
+      } else {
+        throw Exception('Failed to establish session');
+      }
 
       // Show success message and navigate to LOGIN screen (not main app)
       if (mounted) {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/user_service_provider.dart';
 import '../providers/food_listings_provider.dart';
 import '../providers/dashboard_metrics_provider.dart';
@@ -52,7 +53,7 @@ class HomePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userService = ref.watch(userServiceProvider);
-    final listingsAsync = ref.watch(foodListingsProvider);
+    final listingsAsync = ref.watch(foodListingsStreamProvider);
     final metricsAsync = ref.watch(dashboardMetricsProvider);
     return Container(
       color: Colors.grey[50],
@@ -228,7 +229,8 @@ class HomePage extends ConsumerWidget {
                           itemCount: availableListings.length,
                           itemBuilder: (context, index) {
                             final item = availableListings[index];
-                            return _buildFeaturedListingCard(context, item);
+                            return _buildFeaturedListingCard(
+                                context, item, ref);
                           },
                         );
                       },
@@ -296,7 +298,7 @@ class HomePage extends ConsumerWidget {
   }
 
   Widget _buildFeaturedListingCard(
-      BuildContext context, Map<String, dynamic> item) {
+      BuildContext context, Map<String, dynamic> item, WidgetRef ref) {
     // Map Supabase fields to card fields
     final title = (item['title'] ?? 'No Title').toString();
     final description = (item['description'] ?? '').toString();
@@ -420,14 +422,14 @@ class HomePage extends ConsumerWidget {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.orange[50],
+                  color: Colors.green[50],
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   status.isNotEmpty ? status : "available",
                   style: GoogleFonts.poppins(
                     fontSize: 12,
-                    color: Colors.orange[600],
+                    color: Colors.green[600],
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -479,17 +481,9 @@ class HomePage extends ConsumerWidget {
                                   backgroundColor: Colors.orange[600],
                                   foregroundColor: Colors.white,
                                 ),
-                                onPressed: () {
+                                onPressed: () async {
                                   Navigator.of(context).pop();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Item claimed successfully!',
-                                        style: GoogleFonts.poppins(),
-                                      ),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
+                                  await _claimFoodItem(context, item, ref);
                                 },
                                 child: Text(
                                   'Claim',
@@ -517,5 +511,82 @@ class HomePage extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  static Future<void> _claimFoodItem(
+      BuildContext context, Map<String, dynamic> item, WidgetRef ref) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Please sign in to claim food items',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      final listingId = item['id'];
+      if (listingId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Invalid food item',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Call the claim_food_item function
+      final result = await supabase.rpc('claim_food_item', params: {
+        'food_id': listingId,
+        'claimer_id': user.id,
+      });
+
+      if (result == true) {
+        // Refresh the food listings to update the UI
+        ref.invalidate(foodListingsStreamProvider);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Item claimed successfully!',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to claim item. It may already be claimed or you cannot claim your own items.',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error claiming food: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Error claiming item: ${e.toString()}',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

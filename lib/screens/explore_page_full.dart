@@ -82,7 +82,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
 
   // Create markers for food listings
   void _createMarkers([List<Map<String, dynamic>>? filteredListings]) {
-    final listingsAsync = ref.read(foodListingsProvider);
+    final listingsAsync = ref.read(foodListingsStreamProvider);
     listingsAsync.when(
       data: (listings) {
         // Use filtered listings if provided, otherwise use all listings
@@ -211,7 +211,18 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
 
   @override
   Widget build(BuildContext context) {
-    final listingsAsync = ref.watch(foodListingsProvider);
+    final listingsAsync = ref.watch(foodListingsStreamProvider);
+
+    // Listen for changes in food listings and update map markers
+    ref.listen<AsyncValue<List<Map<String, dynamic>>>>(
+        foodListingsStreamProvider, (previous, next) {
+      // Only recreate markers if we're in map view and data has changed
+      if (!_isListView && next.hasValue) {
+        debugPrint('Food listings changed, updating map markers');
+        _createMarkers();
+      }
+    });
+
     return Scaffold(
       body: Container(
         color: Colors.grey[50],
@@ -1040,6 +1051,12 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       } else {
         throw Exception('Unable to claim this food item');
       }
+
+      // Refresh the food listings provider to update the UI and map
+      ref.invalidate(foodListingsStreamProvider);
+
+      // The real-time stream will automatically update, but we can force a marker recreation
+      _createMarkers();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

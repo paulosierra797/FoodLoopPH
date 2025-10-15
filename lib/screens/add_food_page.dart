@@ -9,6 +9,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'dart:io';
 import '../providers/food_listings_provider.dart';
+import '../providers/user_service_provider.dart';
 import '../services/storage_service.dart';
 import 'main_navigation_screen.dart';
 import 'map_picker_screen.dart';
@@ -1036,6 +1037,28 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
     }
 
     try {
+      // First, ensure the user exists in the users table using UserService
+      debugPrint('🔍 Ensuring user exists in users table: ${user.id}');
+      final userService = ref.read(userServiceProvider);
+
+      try {
+        await userService.ensureCurrentUserInDatabase();
+        debugPrint('✅ User verification/creation completed');
+      } catch (e) {
+        debugPrint('❌ Failed to ensure user exists: $e');
+        setState(() {
+          _isSubmitting = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text('Error: Could not verify user profile. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       // Upload images to Supabase Storage
       List<String> imageUrls = [];
       if (_selectedImages.isNotEmpty) {
@@ -1079,6 +1102,7 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
         }
       }
 
+      debugPrint('🍽️ Inserting food listing with user ID: ${user.id}');
       await supabase.from('food_listings').insert({
         'title': _foodNameController.text.trim(),
         'description': _descriptionController.text.trim(),
@@ -1096,6 +1120,11 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
         'is_urgent': _isUrgent,
         'created_at': DateTime.now().toIso8601String(),
       });
+      debugPrint('✅ Food listing inserted successfully');
+
+      // Refresh the food listings provider to update the UI and map
+      ref.invalidate(foodListingsProvider);
+
       showDialog(
         context: context,
         builder: (BuildContext context) {

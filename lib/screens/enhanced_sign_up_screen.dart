@@ -34,9 +34,6 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
   bool _obscureConfirmPassword = true;
 
   // Enhanced validation states
-  bool _isCheckingUsername = false;
-  bool _isUsernameAvailable = true;
-  String _usernameMessage = '';
   double _passwordStrength = 0.0;
   String _passwordStrengthText = '';
   Color _passwordStrengthColor = Colors.red;
@@ -114,34 +111,6 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
     });
   }
 
-  void _checkUsernameAvailability(String username) {
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
-
-    _debounce = Timer(Duration(milliseconds: 500), () {
-      setState(() => _isCheckingUsername = true);
-
-      Timer(Duration(seconds: 1), () {
-        final unavailableUsernames = [
-          'admin',
-          'user',
-          'test',
-          'foodloop',
-          'demo'
-        ];
-        final isAvailable =
-            !unavailableUsernames.contains(username.toLowerCase());
-
-        setState(() {
-          _isCheckingUsername = false;
-          _isUsernameAvailable = isAvailable;
-          _usernameMessage = isAvailable
-              ? 'Username is available!'
-              : 'Username is already taken';
-        });
-      });
-    });
-  }
-
   String? _validateName(String? value) {
     if (value == null || value.isEmpty) {
       return 'This field is required';
@@ -174,11 +143,12 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
     if (value.length < 3) {
       return 'Username must be at least 3 characters';
     }
+    if (value.length > 20) {
+      return 'Username must be 20 characters or less';
+    }
+    // Only allow letters, numbers, and underscores
     if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value)) {
       return 'Username can only contain letters, numbers, and underscores';
-    }
-    if (!_isUsernameAvailable && !_isCheckingUsername) {
-      return 'Username is already taken';
     }
     return null;
   }
@@ -255,14 +225,6 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
       );
       return;
     }
-    if (!_isUsernameAvailable) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Please choose a different username'),
-            backgroundColor: Colors.red),
-      );
-      return;
-    }
 
     setState(() => _isLoading = true);
 
@@ -294,9 +256,9 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
         email: email,
         password: password,
         data: {
-          'username': _usernameController.text.trim(),
           'first_name': _firstNameController.text.trim(),
           'last_name': _lastNameController.text.trim(),
+          'username': _usernameController.text.trim(),
           'phone_number': _phoneController.text.trim(),
         },
         emailRedirectTo: 'com.example.foodloopph://auth/callback',
@@ -305,17 +267,7 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
       final user = authResponse.user;
       if (user == null) throw Exception('Sign up failed.');
 
-      // Insert user details into the Supabase users table
-      await supabase.from('users').insert({
-        'id': user.id,
-        'first_name': _firstNameController.text.trim(),
-        'last_name': _lastNameController.text.trim(),
-        'username': _usernameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'phone_number': _phoneController.text.trim(),
-      });
-
-      // Create user profile in users table immediately after Auth user creation
+      // Create user profile in users table
       debugPrint('✅ Auth user created: ${user.id}');
       debugPrint('📝 Creating user profile in users table...');
 
@@ -356,10 +308,12 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
         MaterialPageRoute(builder: (context) => const LoginScreen()),
       );
     } catch (e) {
+      debugPrint('❌ Registration error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text('Registration failed. Please try again.'),
-            backgroundColor: Colors.red),
+            content: Text('Registration failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 5)),
       );
     } finally {
       setState(() => _isLoading = false);
@@ -631,6 +585,42 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
                                 ),
                                 SizedBox(height: 20),
 
+                                // Username Field
+                                TextFormField(
+                                  controller: _usernameController,
+                                  validator: _validateUsername,
+                                  style: GoogleFonts.poppins(fontSize: 16),
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.allow(
+                                        RegExp(r'[a-zA-Z0-9_]')),
+                                    LengthLimitingTextInputFormatter(20),
+                                  ],
+                                  decoration: InputDecoration(
+                                    labelText: 'Username',
+                                    hintText: 'Choose a unique username',
+                                    prefixIcon: Icon(Icons.alternate_email,
+                                        color: Colors.grey[600]),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide:
+                                          BorderSide(color: Colors.grey[300]!),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(
+                                          color: Colors.orange[400]!, width: 2),
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 16),
+                                  ),
+                                ),
+                                SizedBox(height: 20),
+
                                 // Email Field
                                 TextFormField(
                                   controller: _emailController,
@@ -659,71 +649,6 @@ class _EnhancedSignUpScreenState extends State<EnhancedSignUpScreen>
                                     fillColor: Colors.white,
                                     contentPadding: EdgeInsets.symmetric(
                                         horizontal: 16, vertical: 16),
-                                  ),
-                                ),
-                                SizedBox(height: 20),
-
-                                // Username Field
-                                TextFormField(
-                                  controller: _usernameController,
-                                  validator: _validateUsername,
-                                  style: GoogleFonts.poppins(fontSize: 16),
-                                  onChanged: (value) {
-                                    if (value.isNotEmpty) {
-                                      _checkUsernameAvailability(value);
-                                    }
-                                  },
-                                  decoration: InputDecoration(
-                                    labelText: 'Username',
-                                    hintText: 'Choose a unique username',
-                                    prefixIcon: Icon(Icons.alternate_email,
-                                        color: Colors.grey[600]),
-                                    suffixIcon: _isCheckingUsername
-                                        ? SizedBox(
-                                            width: 20,
-                                            height: 20,
-                                            child: Center(
-                                              child: CircularProgressIndicator(
-                                                  strokeWidth: 2),
-                                            ),
-                                          )
-                                        : _usernameController.text.isNotEmpty
-                                            ? Icon(
-                                                _isUsernameAvailable
-                                                    ? Icons.check_circle
-                                                    : Icons.error,
-                                                color: _isUsernameAvailable
-                                                    ? Colors.green
-                                                    : Colors.red,
-                                              )
-                                            : null,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide:
-                                          BorderSide(color: Colors.grey[300]!),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide(
-                                          color: Colors.orange[400]!, width: 2),
-                                    ),
-                                    filled: true,
-                                    fillColor: Colors.white,
-                                    contentPadding: EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 16),
-                                    helperText:
-                                        _usernameController.text.isNotEmpty
-                                            ? _usernameMessage
-                                            : null,
-                                    helperStyle: GoogleFonts.poppins(
-                                      color: _isUsernameAvailable
-                                          ? Colors.green
-                                          : Colors.red,
-                                      fontSize: 12,
-                                    ),
                                   ),
                                 ),
                                 SizedBox(height: 20),
