@@ -15,6 +15,7 @@ class _ChatListPageState extends State<ChatListPage> {
   List<Map<String, dynamic>> _conversations = [];
   bool _isLoading = true;
   String _searchQuery = '';
+  bool _isSearching = false;
 
   @override
   void initState() {
@@ -51,167 +52,40 @@ class _ChatListPageState extends State<ChatListPage> {
 
       debugPrint('Loading conversations for user: $currentUserId');
 
-      // First try with a simple query to see if we have any messages
-      final simpleResponse = await _supabase
-          .from('chat_messages')
-          .select('sender_id, receiver_id, message_text, timestamp')
-          .or('sender_id.eq.$currentUserId,receiver_id.eq.$currentUserId')
-          .order('timestamp', ascending: false);
+      // Use the proper SQL function to get conversations
+      try {
+        final response = await _supabase.rpc('get_user_conversations', params: {
+          'input_user_id': currentUserId,
+        });
 
-      debugPrint('Simple query result: $simpleResponse');
+        debugPrint('Conversations from SQL function: $response');
 
-      // Try to fetch conversations with user information
-      final response = await _supabase
-          .from('chat_messages')
-          .select(
-            'sender_id, receiver_id, message_text, timestamp, sender:users!chat_messages_sender_id_fkey(first_name, last_name), receiver:users!chat_messages_receiver_id_fkey(first_name, last_name)',
-          )
-          .or('sender_id.eq.$currentUserId,receiver_id.eq.$currentUserId')
-          .order('timestamp', ascending: false);
-
-      debugPrint('Full query result: $response');
-
-      // Group messages by conversation partner
-      Map<String, Map<String, dynamic>> conversationsMap = {};
-
-      for (var data in response as List<dynamic>) {
-        final isSender = data['sender_id'] == currentUserId;
-        final otherUserId = isSender ? data['receiver_id'] : data['sender_id'];
-
-        // Build user name from first_name and last_name
-        String otherUserName = 'Unknown User';
-        if (isSender && data['receiver'] != null) {
-          final receiver = data['receiver'];
-          final firstName = receiver['first_name'] ?? '';
-          final lastName = receiver['last_name'] ?? '';
-          otherUserName = '$firstName $lastName'.trim();
-          if (otherUserName.isEmpty) otherUserName = 'Unknown User';
-        } else if (!isSender && data['sender'] != null) {
-          final sender = data['sender'];
-          final firstName = sender['first_name'] ?? '';
-          final lastName = sender['last_name'] ?? '';
-          otherUserName = '$firstName $lastName'.trim();
-          if (otherUserName.isEmpty) otherUserName = 'Unknown User';
-        }
-
-        final messageText = data['message_text'] ?? '';
-        final timestamp =
-            DateTime.tryParse(data['timestamp'] ?? '') ?? DateTime.now();
+        // Always use SQL function result if it doesn't throw an error
+        final List<Map<String, dynamic>> conversations =
+            List<Map<String, dynamic>>.from(response ?? []);
 
         debugPrint(
-            'Processing message: sender=$isSender, otherUserId=$otherUserId, otherUserName=$otherUserName, message=$messageText');
-
-        // Use other user ID as key to group conversations
-        if (!conversationsMap.containsKey(otherUserId) ||
-            conversationsMap[otherUserId]!['timestamp'].isBefore(timestamp)) {
-          conversationsMap[otherUserId] = {
-            'other_user_id': otherUserId,
-            'other_user_name': otherUserName,
-            'last_message': messageText,
-            'last_message_time': timestamp,
-            'timestamp': timestamp,
-          };
-        }
+            'Using SQL function results with ${conversations.length} conversations');
+        setState(() {
+          _conversations = conversations;
+          _isLoading = false;
+        });
+        return;
+      } catch (e) {
+        debugPrint('Error using SQL function: $e');
+        setState(() {
+          _conversations = [];
+          _isLoading = false;
+        });
+        return;
       }
-
-      debugPrint('Conversations map: $conversationsMap');
-
-      // Convert map to list and sort by timestamp
-      final conversationsList = conversationsMap.values.toList();
-      conversationsList
-          .sort((a, b) => b['timestamp'].compareTo(a['timestamp']));
-
-      debugPrint('Final conversations list: $conversationsList');
-
-      setState(() {
-        _conversations = conversationsList;
-        _isLoading = false;
-      });
     } catch (e, stackTrace) {
       debugPrint('Error loading conversations: $e');
       debugPrint('Stack trace: $stackTrace');
-
-      // Fallback: Load messages without user join and fetch user names separately
-      try {
-        final currentUserIdFallback = _supabase.auth.currentUser?.id;
-        if (currentUserIdFallback == null) {
-          setState(() => _isLoading = false);
-          return;
-        }
-
-        debugPrint('Attempting fallback query...');
-        final fallbackResponse = await _supabase
-            .from('chat_messages')
-            .select('sender_id, receiver_id, message_text, timestamp')
-            .or('sender_id.eq.$currentUserIdFallback,receiver_id.eq.$currentUserIdFallback')
-            .order('timestamp', ascending: false);
-
-        debugPrint('Fallback query result: $fallbackResponse');
-
-        // Group messages by conversation partner
-        Map<String, Map<String, dynamic>> conversationsMap = {};
-
-        for (var data in fallbackResponse as List<dynamic>) {
-          final isSender = data['sender_id'] == currentUserIdFallback;
-          final otherUserId =
-              isSender ? data['receiver_id'] : data['sender_id'];
-          final messageText = data['message_text'] ?? '';
-          final timestamp =
-              DateTime.tryParse(data['timestamp'] ?? '') ?? DateTime.now();
-
-          // Use other user ID as key to group conversations
-          if (!conversationsMap.containsKey(otherUserId) ||
-              conversationsMap[otherUserId]!['timestamp'].isBefore(timestamp)) {
-            conversationsMap[otherUserId] = {
-              'other_user_id': otherUserId,
-              'other_user_name': 'Loading...', // Placeholder
-              'last_message': messageText,
-              'last_message_time': timestamp,
-              'timestamp': timestamp,
-            };
-          }
-        }
-
-        // Fetch usernames and profile pictures for each conversation partner
-        for (String userId in conversationsMap.keys) {
-          try {
-            final userResponse = await _supabase
-                .from('users')
-                .select('first_name, last_name, email, profile_picture')
-                .eq('id', userId)
-                .maybeSingle();
-
-            if (userResponse != null) {
-              final firstName = userResponse['first_name'] ?? '';
-              final lastName = userResponse['last_name'] ?? '';
-              final profilePicture = userResponse['profile_picture']?.toString();
-              String userName = '$firstName $lastName'.trim();
-              if (userName.isEmpty) {
-                userName =
-                    userResponse['email']?.toString().split('@')[0] ?? 'User';
-              }
-              conversationsMap[userId]!['other_user_name'] = userName;
-              conversationsMap[userId]!['profile_picture'] = profilePicture;
-            }
-          } catch (e) {
-            debugPrint('Error fetching user info for $userId: $e');
-            // Keep the placeholder name
-          }
-        }
-
-        // Convert map to list and sort by timestamp
-        final conversationsList = conversationsMap.values.toList();
-        conversationsList
-            .sort((a, b) => b['timestamp'].compareTo(a['timestamp']));
-
-        setState(() {
-          _conversations = conversationsList;
-          _isLoading = false;
-        });
-      } catch (fallbackError) {
-        debugPrint('Fallback query also failed: $fallbackError');
-        setState(() => _isLoading = false);
-      }
+      setState(() {
+        _conversations = [];
+        _isLoading = false;
+      });
     }
   }
 
@@ -234,21 +108,58 @@ class _ChatListPageState extends State<ChatListPage> {
                 ),
               ],
             ),
-            child: Row(
+            child: Column(
               children: [
-                Text(
-                  'Messages',
-                  style: GoogleFonts.poppins(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                Row(
+                  children: [
+                    Text(
+                      'Messages',
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    Spacer(),
+                    IconButton(
+                      icon: Icon(Icons.search, color: Colors.black),
+                      onPressed: _toggleSearch,
+                    ),
+                  ],
+                ),
+                // Search bar (show/hide based on search state)
+                if (_isSearching)
+                  Container(
+                    margin: EdgeInsets.only(top: 12),
+                    child: TextField(
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        hintText: 'Search by name...',
+                        prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
+                        suffixIcon: IconButton(
+                          icon: Icon(Icons.clear, color: Colors.grey[600]),
+                          onPressed: _clearSearch,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25),
+                          borderSide: BorderSide(color: Colors.amber[600]!),
+                        ),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          _searchQuery = value;
+                        });
+                      },
+                    ),
                   ),
-                ),
-                Spacer(),
-                IconButton(
-                  icon: Icon(Icons.search, color: Colors.black),
-                  onPressed: _showSearchDialog,
-                ),
               ],
             ),
           ),
@@ -305,10 +216,8 @@ class _ChatListPageState extends State<ChatListPage> {
         : _conversations.where((conv) {
             final name =
                 conv['other_user_name']?.toString().toLowerCase() ?? '';
-            final email =
-                conv['other_user_email']?.toString().toLowerCase() ?? '';
             final query = _searchQuery.toLowerCase();
-            return name.contains(query) || email.contains(query);
+            return name.contains(query);
           }).toList();
 
     return RefreshIndicator(
@@ -333,10 +242,67 @@ class _ChatListPageState extends State<ChatListPage> {
         ? conversation['last_message_time'] as DateTime
         : (conversation['last_message_time'] != null
             ? DateTime.parse(conversation['last_message_time'].toString())
+                .toLocal()
             : DateTime.now());
     final unreadCount = conversation['unread_count'] ?? 0;
     final listingTitle = conversation['listing_title']?.toString();
 
+    // Show simplified tile when searching
+    if (_isSearching && _searchQuery.isNotEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ListTile(
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          leading: CircleAvatar(
+            radius: 24,
+            backgroundColor: Colors.amber[100],
+            backgroundImage: conversation['other_user_profile_picture'] != null
+                ? NetworkImage(conversation['other_user_profile_picture'])
+                : null,
+            child: conversation['other_user_profile_picture'] == null
+                ? Text(
+                    otherUserName.isNotEmpty
+                        ? otherUserName[0].toUpperCase()
+                        : 'U',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.amber[800],
+                    ),
+                  )
+                : null,
+          ),
+          title: Text(
+            otherUserName,
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+          trailing: Icon(
+            Icons.chat_bubble_outline,
+            color: Colors.grey[400],
+            size: 20,
+          ),
+          onTap: () => _openChat(conversation),
+        ),
+      );
+    }
+
+    // Show full tile when not searching
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
@@ -355,12 +321,14 @@ class _ChatListPageState extends State<ChatListPage> {
         leading: CircleAvatar(
           radius: 24,
           backgroundColor: Colors.amber[100],
-          backgroundImage: conversation['profile_picture'] != null 
-              ? NetworkImage(conversation['profile_picture']) 
+          backgroundImage: conversation['other_user_profile_picture'] != null
+              ? NetworkImage(conversation['other_user_profile_picture'])
               : null,
-          child: conversation['profile_picture'] == null
+          child: conversation['other_user_profile_picture'] == null
               ? Text(
-                  otherUserName.isNotEmpty ? otherUserName[0].toUpperCase() : 'U',
+                  otherUserName.isNotEmpty
+                      ? otherUserName[0].toUpperCase()
+                      : 'U',
                   style: GoogleFonts.poppins(
                     fontWeight: FontWeight.w600,
                     color: Colors.amber[800],
@@ -437,40 +405,20 @@ class _ChatListPageState extends State<ChatListPage> {
     );
   }
 
-  void _showSearchDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Search Conversations', style: GoogleFonts.poppins()),
-        content: TextField(
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'Enter name or email...',
-            border: OutlineInputBorder(),
-          ),
-          onChanged: (value) {
-            setState(() {
-              _searchQuery = value;
-            });
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _searchQuery = '';
-              });
-              Navigator.pop(context);
-            },
-            child: Text('Clear'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close'),
-          ),
-        ],
-      ),
-    );
+  void _toggleSearch() {
+    setState(() {
+      _isSearching = !_isSearching;
+      if (!_isSearching) {
+        _searchQuery = '';
+      }
+    });
+  }
+
+  void _clearSearch() {
+    setState(() {
+      _searchQuery = '';
+      _isSearching = false;
+    });
   }
 
   void _openChat(Map<String, dynamic> conversation) {

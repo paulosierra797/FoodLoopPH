@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import '../providers/food_listings_provider.dart';
 
 class ExplorePage extends ConsumerStatefulWidget {
@@ -44,8 +45,24 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       if (permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always) {
         Position position = await Geolocator.getCurrentPosition();
+
+        // Convert coordinates to address
+        String locationText = 'Dasmariñas, Cavite'; // fallback
+        try {
+          List<Placemark> placemarks = await placemarkFromCoordinates(
+              position.latitude, position.longitude);
+          if (placemarks.isNotEmpty) {
+            Placemark place = placemarks[0];
+            locationText =
+                '${place.locality ?? place.subAdministrativeArea ?? 'Unknown'}, ${place.administrativeArea ?? 'Philippines'}';
+          }
+        } catch (geocodingError) {
+          print('Geocoding error: $geocodingError');
+        }
+
         setState(() {
           _currentLocation = LatLng(position.latitude, position.longitude);
+          _selectedLocation = locationText;
           _isLoadingLocation = false;
         });
         _createMarkers();
@@ -70,39 +87,42 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       data: (listings) {
         // Use filtered listings if provided, otherwise use all listings
         final listingsToShow = filteredListings ?? listings;
-        
+
         // Apply the same filtering logic as in the list view
         final filtered = listingsToShow.where((listing) {
           final title = (listing["title"] ?? '').toString().toLowerCase();
-          final description = (listing["description"] ?? '').toString().toLowerCase();
+          final description =
+              (listing["description"] ?? '').toString().toLowerCase();
           final category = (listing["category"] ?? 'Others').toString();
           final matchesSearch = _searchQuery.isEmpty ||
               title.contains(_searchQuery.toLowerCase()) ||
               description.contains(_searchQuery.toLowerCase());
-          final matchesCategory = _selectedCategory == 'All' ||
-              category == _selectedCategory;
+          final matchesCategory =
+              _selectedCategory == 'All' || category == _selectedCategory;
           return matchesSearch && matchesCategory;
         }).toList();
-        
+
         // Sort to prioritize available products first, then claimed products
         filtered.sort((a, b) {
           final aStatus = (a["status"] ?? "claimed").toString().toLowerCase();
           final bStatus = (b["status"] ?? "claimed").toString().toLowerCase();
-          
+
           // Available products come first (available = 0, claimed = 1)
           final aAvailable = aStatus == 'available' ? 0 : 1;
           final bAvailable = bStatus == 'available' ? 0 : 1;
-          
+
           if (aAvailable != bAvailable) {
             return aAvailable.compareTo(bAvailable);
           }
-          
+
           // For same status, sort by creation date (newest first)
-          final aCreated = DateTime.tryParse(a["created_at"] ?? "") ?? DateTime.now();
-          final bCreated = DateTime.tryParse(b["created_at"] ?? "") ?? DateTime.now();
+          final aCreated =
+              DateTime.tryParse(a["created_at"] ?? "") ?? DateTime.now();
+          final bCreated =
+              DateTime.tryParse(b["created_at"] ?? "") ?? DateTime.now();
           return bCreated.compareTo(aCreated);
         });
-        
+
         Set<Marker> markers = {};
 
         // Add user location marker
@@ -183,7 +203,9 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     if (color == Colors.blue) return BitmapDescriptor.hueBlue;
     if (color == Colors.brown) return BitmapDescriptor.hueRose;
     if (color == Colors.purple) return BitmapDescriptor.hueViolet;
-    if (color == Colors.grey) return BitmapDescriptor.hueRed; // Use red hue for grey since there's no grey option
+    if (color == Colors.grey)
+      return BitmapDescriptor
+          .hueRed; // Use red hue for grey since there's no grey option
     return BitmapDescriptor.hueGreen;
   }
 
@@ -313,26 +335,30 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                         category == _selectedCategory;
                     return matchesSearch && matchesCategory;
                   }).toList();
-                  
+
                   // Sort to prioritize available products first, then claimed products
                   filtered.sort((a, b) {
-                    final aStatus = (a["status"] ?? "claimed").toString().toLowerCase();
-                    final bStatus = (b["status"] ?? "claimed").toString().toLowerCase();
-                    
+                    final aStatus =
+                        (a["status"] ?? "claimed").toString().toLowerCase();
+                    final bStatus =
+                        (b["status"] ?? "claimed").toString().toLowerCase();
+
                     // Available products come first (available = 0, claimed = 1)
                     final aAvailable = aStatus == 'available' ? 0 : 1;
                     final bAvailable = bStatus == 'available' ? 0 : 1;
-                    
+
                     if (aAvailable != bAvailable) {
                       return aAvailable.compareTo(bAvailable);
                     }
-                    
+
                     // For same status, sort by creation date (newest first)
-                    final aCreated = DateTime.tryParse(a["created_at"] ?? "") ?? DateTime.now();
-                    final bCreated = DateTime.tryParse(b["created_at"] ?? "") ?? DateTime.now();
+                    final aCreated = DateTime.tryParse(a["created_at"] ?? "") ??
+                        DateTime.now();
+                    final bCreated = DateTime.tryParse(b["created_at"] ?? "") ??
+                        DateTime.now();
                     return bCreated.compareTo(aCreated);
                   });
-                  
+
                   return _isListView
                       ? _buildListView(filtered)
                       : _buildMapView(filtered);
@@ -558,7 +584,8 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       decoration: BoxDecoration(
         color: available ? Colors.white : Colors.grey[50],
         borderRadius: BorderRadius.circular(16),
-        border: available ? null : Border.all(color: Colors.grey[300]!, width: 1),
+        border:
+            available ? null : Border.all(color: Colors.grey[300]!, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(available ? 0.1 : 0.05),
@@ -583,11 +610,13 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                   height: 150,
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.7),
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(16)),
                   ),
                   child: Center(
                     child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
                         color: Colors.red[600],
                         borderRadius: BorderRadius.circular(20),
@@ -784,8 +813,6 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       ),
     );
   }
-
-
 
   // Helper method to build food image with fallbacks
   Widget _buildFoodImage(

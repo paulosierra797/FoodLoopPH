@@ -162,7 +162,7 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
   Future<void> _fetchPosts() async {
     try {
       final currentUser = supabase.auth.currentUser;
-      
+
       final response = await supabase
           .from('community_posts')
           .select('*, comments(*)') // Fetch posts along with their comments
@@ -214,15 +214,14 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
             .from('post_likes')
             .select('user_id')
             .eq('post_id', data['id']);
-        
+
         final likesCount = (likesResponse as List).length;
-        
+
         // Check if current user liked this post
         bool isLikedByUser = false;
         if (currentUser != null) {
-          isLikedByUser = (likesResponse as List).any(
-            (like) => like['user_id'] == currentUser.id
-          );
+          isLikedByUser = (likesResponse as List)
+              .any((like) => like['user_id'] == currentUser.id);
         }
 
         // Debug: Check category from database
@@ -709,7 +708,8 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
                           children: [
                             Icon(Icons.delete, size: 18, color: Colors.red),
                             SizedBox(width: 8),
-                            Text('Delete Post', style: TextStyle(color: Colors.red)),
+                            Text('Delete Post',
+                                style: TextStyle(color: Colors.red)),
                           ],
                         ),
                       ),
@@ -935,7 +935,8 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
               'Like',
               style: GoogleFonts.poppins(
                 fontSize: 13,
-                color: post.isLikedByUser ? Colors.orange[600] : Colors.grey[600],
+                color:
+                    post.isLikedByUser ? Colors.orange[600] : Colors.grey[600],
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -1171,7 +1172,7 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
           post.likesCount++;
         }
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
