@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'admin/manage_users_screen.dart';
 import 'admin/user_listings_analytics.dart';
+import 'admin/manage_community_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({Key? key}) : super(key: key);
@@ -16,6 +17,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool _loading = false;
   int? _totalUsers;
   int? _totalPosts;
+  int? _totalCommunityPosts;
   List<Map<String, dynamic>> _recentListings = [];
 
   @override
@@ -73,18 +75,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final supabase = Supabase.instance.client;
     int? users;
     int? posts;
+    int? communityPosts;
+    
     try {
       final userRows = await supabase.from('users').select('id');
       users = (userRows as List).length;
     } catch (_) {
       users = null;
     }
+    
     try {
       final postRows = await supabase.from('food_listings').select('id');
       posts = (postRows as List).length;
     } catch (_) {
       posts = null;
     }
+    
+    try {
+      final communityRows = await supabase.from('community_posts').select('id');
+      communityPosts = (communityRows as List).length;
+    } catch (_) {
+      communityPosts = null;
+    }
+    
     try {
       final recent = await supabase
           .from('food_listings')
@@ -95,10 +108,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     } catch (_) {
       _recentListings = [];
     }
+    
     if (!mounted) return;
     setState(() {
       _totalUsers = users;
       _totalPosts = posts;
+      _totalCommunityPosts = communityPosts;
       _loading = false;
     });
   }
@@ -106,12 +121,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final amber = Colors.amber[700]!;
-    final subtitle = 'Manage the users, and listings in one place';
+    final subtitle = 'Manage the users, listings and community in one place';
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: amber,
         elevation: 0,
+        automaticallyImplyLeading: false, // Remove back button
         title: Text('Admin Dashboard', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
         actions: [
           IconButton(
@@ -155,6 +171,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ),
         child: SafeArea(
           child: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 24), // Add bottom padding to scroll view
             child: Column(
               children: [
                 // Hero header
@@ -213,33 +230,36 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                 ),
 
-                // KPI grid
+                // KPI grid - using Row instead of GridView
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: GridView(
-                    padding: EdgeInsets.zero,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      // Slightly decrease aspect ratio to give a bit more vertical space
-                      // preventing minor 2-3px overflow in dense text scenarios.
-                      childAspectRatio: 1.6,
-                    ),
+                  child: Row(
                     children: [
-                      _KpiCard(
-                        label: 'Total Users',
-                        value: _loading ? null : (_totalUsers?.toString() ?? '—'),
-                        icon: Icons.people_alt_outlined,
-                        color: Colors.teal[400]!,
+                      Expanded(
+                        child: _KpiCard(
+                          label: 'Total Users',
+                          value: _loading ? null : (_totalUsers?.toString() ?? '—'),
+                          icon: Icons.people_alt_outlined,
+                          color: Colors.teal[400]!,
+                        ),
                       ),
-                      _KpiCard(
-                        label: 'Total Posts',
-                        value: _loading ? null : (_totalPosts?.toString() ?? '—'),
-                        icon: Icons.fastfood_outlined,
-                        color: Colors.green[400]!,
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _KpiCard(
+                          label: 'Food Posts',
+                          value: _loading ? null : (_totalPosts?.toString() ?? '—'),
+                          icon: Icons.fastfood_outlined,
+                          color: Colors.green[400]!,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _KpiCard(
+                          label: 'Community',
+                          value: _loading ? null : (_totalCommunityPosts?.toString() ?? '—'),
+                          icon: Icons.forum_outlined,
+                          color: Colors.blue[400]!,
+                        ),
                       ),
                     ],
                   ),
@@ -247,7 +267,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
                 // Quick actions
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 18, 16, 6),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                   child: Row(
                     children: [
                       Text('Quick Actions', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
@@ -270,6 +290,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         label: 'User\nListings',
                         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UserListingsAnalyticsScreen())),
                       ),
+                      _QuickAction(
+                        icon: Icons.forum_outlined,
+                        label: 'Manage\nCommunity',
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ManageCommunityScreen())),
+                      ),
                     ],
                   ),
                 ),
@@ -277,7 +302,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
 
                 // Recent Food Listings
-                const SizedBox(height: 18),
+                const SizedBox(height: 12),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
@@ -371,7 +396,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           }).toList(),
                         ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 32), // Increased bottom padding
               ],
             ),
           ),
@@ -397,64 +422,62 @@ class _KpiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 6),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
         ],
         border: Border.all(color: Colors.grey[200]!),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
               color: color.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: color),
+            child: Icon(icon, color: color, size: 18),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: GoogleFonts.poppins(
-                    color: Colors.grey[700],
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              color: Colors.grey[700],
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          value == null
+              ? Container(
+                  height: 14,
+                  width: 24,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(4),
                   ),
+                )
+              : Text(
+                  value!,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 4),
-                value == null
-                    ? Container(
-                        height: 18,
-                        width: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                      )
-                    : Text(
-                        value!,
-                        style: GoogleFonts.poppins(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black87,
-                        ),
-                      ),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -479,7 +502,7 @@ class _QuickAction extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         width: 165,
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -497,19 +520,20 @@ class _QuickAction extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: Colors.amber[100],
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: Colors.amber[700]),
+              child: Icon(icon, color: Colors.amber[700], size: 20),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Text(
               label,
               style: GoogleFonts.poppins(
                 fontWeight: FontWeight.w600,
                 color: Colors.black87,
+                fontSize: 13,
               ),
             ),
           ],

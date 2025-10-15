@@ -225,13 +225,17 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
           );
         }
 
+        // Debug: Check category from database
+        String postCategory = data['category'] ?? 'Unknown';
+        debugPrint('📝 Post "${data['content']?.toString().substring(0, (data['content']?.toString().length ?? 0) > 30 ? 30 : (data['content']?.toString().length ?? 0))}..." has DB category: "$postCategory"');
+
         fetchedPosts.add(CommunityPost(
           id: data['id'],
           userId: userId, // Store the user_id for authorization checks
           author: postAuthorName,
           authorAvatar: data['author_avatar'] ?? '👤',
           authorProfilePicture: postAuthorProfilePicture,
-          category: data['category'],
+          category: postCategory,
           content: data['content'],
           imagePaths: (data['images'] as List<dynamic>?)?.cast<String>(),
           timestamp: DateTime.parse(data['timestamp']),
@@ -405,7 +409,21 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
     if (selectedCategory == 'All') {
       return posts;
     }
-    return posts.where((post) => post.category == selectedCategory).toList();
+    
+    // Debug logging to help identify filtering issues
+    debugPrint('🔍 FILTERING DEBUG:');
+    debugPrint('  Selected Category: "$selectedCategory"');
+    debugPrint('  Total Posts: ${posts.length}');
+    
+    for (var post in posts) {
+      debugPrint('  Post "${post.content.substring(0, post.content.length > 30 ? 30 : post.content.length)}..." has category: "${post.category}"');
+      debugPrint('    Category match: ${post.category == selectedCategory}');
+    }
+    
+    final filteredPosts = posts.where((post) => post.category == selectedCategory).toList();
+    debugPrint('  Filtered Posts Count: ${filteredPosts.length}');
+    
+    return filteredPosts;
   }
 
   @override
@@ -496,10 +514,10 @@ class _CommunityPageNewState extends ConsumerState<CommunityPageNew> {
                       ),
                       items: [
                         'All',
+                        'General',
                         'Zero Waste',
                         'Food Safety',
                         'Recipes',
-                        'General',
                         'Tips'
                       ].map((String category) {
                         return DropdownMenuItem<String>(
