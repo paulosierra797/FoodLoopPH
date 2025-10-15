@@ -270,7 +270,7 @@ class _UserListingsAnalyticsScreenState extends State<UserListingsAnalyticsScree
                           hint: Text('All Status', style: GoogleFonts.poppins(fontSize: 12)),
                           underline: SizedBox.shrink(),
                           isDense: true,
-                          items: <String?>[null, 'available', 'claimed', 'removed']
+                          items: <String?>[null, 'available', 'claimed']
                               .map((s) => DropdownMenuItem(
                                     value: s,
                                     child: Text(s ?? 'All Status', style: GoogleFonts.poppins(fontSize: 12)),

@@ -26,50 +26,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _loadStats();
   }
 
-  Future<void> _dashUpdateStatus(String id, String newStatus) async {
-    try {
-      await Supabase.instance.client
-          .from('food_listings')
-          .update({'status': newStatus})
-          .eq('id', id);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(newStatus == 'removed' ? 'Listing hidden' : 'Listing updated')),
-      );
-      await _loadStats();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update listing: $e')));
-    }
-  }
-
-  Future<void> _dashDelete(String id) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete listing?'),
-        content: const Text('This action cannot be undone.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), style: TextButton.styleFrom(foregroundColor: Colors.red), child: const Text('Delete')),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    try {
-      await Supabase.instance.client
-          .from('food_listings')
-          .delete()
-          .eq('id', id);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing deleted')));
-      await _loadStats();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete listing: $e')));
-    }
-  }
-
   Future<void> _loadStats() async {
     setState(() => _loading = true);
     final supabase = Supabase.instance.client;
@@ -371,24 +327,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                         Text((it['created_at'] ?? '').toString(), style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600])),
                                       ],
                                     ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  if (status != 'removed')
-                                    OutlinedButton(
-                                      onPressed: () => _dashUpdateStatus(it['id'].toString(), 'removed'),
-                                      style: OutlinedButton.styleFrom(foregroundColor: Colors.red[700], side: BorderSide(color: Colors.red[300]!)),
-                                      child: const Text('Hide'),
-                                    )
-                                  else
-                                    OutlinedButton(
-                                      onPressed: () => _dashUpdateStatus(it['id'].toString(), 'available'),
-                                      style: OutlinedButton.styleFrom(foregroundColor: Colors.green[700], side: BorderSide(color: Colors.green[300]!)),
-                                      child: const Text('Unhide'),
-                                    ),
-                                  const SizedBox(width: 8),
-                                  TextButton(
-                                    onPressed: () => _dashDelete(it['id'].toString()),
-                                    child: const Text('Delete', style: TextStyle(color: Colors.red)),
                                   ),
                                 ],
                               ),
