@@ -33,7 +33,7 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
   String _selectedCategory = 'Prepared Food';
   String _selectedExpiry = 'Today';
   String _selectedMeasurement = 'per piece';
-  bool _isUrgent = false;
+
   bool _isSubmitting = false;
   List<File> _selectedImages = [];
   final ImagePicker _picker = ImagePicker();
@@ -577,65 +577,6 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
                           },
                         ),
 
-                        SizedBox(height: 16),
-
-                        // Urgent Toggle
-                        Container(
-                          padding: EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: _isUrgent ? Colors.red[50] : Colors.grey[50],
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: _isUrgent
-                                  ? Colors.red[200]!
-                                  : Colors.grey[200]!,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.priority_high,
-                                color: _isUrgent
-                                    ? Colors.red[600]
-                                    : Colors.grey[600],
-                              ),
-                              SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Urgent Pickup',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: _isUrgent
-                                            ? Colors.red[700]
-                                            : Colors.grey[700],
-                                      ),
-                                    ),
-                                    Text(
-                                      'Food needs to be picked up today',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12,
-                                        color: _isUrgent
-                                            ? Colors.red[600]
-                                            : Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Switch(
-                                value: _isUrgent,
-                                onChanged: (value) =>
-                                    setState(() => _isUrgent = value),
-                                activeColor: Colors.red[600],
-                              ),
-                            ],
-                          ),
-                        ),
-
                         SizedBox(height: 32),
 
                         // Submit Button
@@ -1117,13 +1058,12 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
         'contact_number': _contactController.text.trim(),
         'latitude': _selectedLocation?.latitude,
         'longitude': _selectedLocation?.longitude,
-        'is_urgent': _isUrgent,
         'created_at': DateTime.now().toIso8601String(),
       });
       debugPrint('✅ Food listing inserted successfully');
 
       // Refresh the food listings provider to update the UI and map
-      ref.invalidate(foodListingsProvider);
+      ref.invalidate(foodListingsStreamProvider);
 
       showDialog(
         context: context,
@@ -1348,7 +1288,6 @@ class _AddFoodPageState extends ConsumerState<AddFoodPage> {
       _selectedCategory = 'Prepared Food';
       _selectedExpiry = 'Today';
       _selectedMeasurement = 'per piece';
-      _isUrgent = false;
       _isSubmitting = false;
       _selectedImages.clear();
     });

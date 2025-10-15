@@ -6,6 +6,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../providers/food_listings_provider.dart';
+import '../providers/claim_state_provider.dart';
 
 class ExplorePage extends ConsumerStatefulWidget {
   const ExplorePage({super.key});
@@ -19,6 +20,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
   String _selectedLocation = 'Dasmariñas, Cavite';
   String _searchQuery = '';
   String _selectedCategory = 'All';
+  String _statusFilter = 'Available'; // 'Available', 'Claimed', 'All'
   final TextEditingController _searchController = TextEditingController();
 
   // Map related variables
@@ -89,7 +91,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
         final listingsToShow = filteredListings ?? listings;
 
         // Apply the same filtering logic as in the list view
-        final filtered = listingsToShow.where((listing) {
+        var filtered = listingsToShow.where((listing) {
           final title = (listing["title"] ?? '').toString().toLowerCase();
           final description =
               (listing["description"] ?? '').toString().toLowerCase();
@@ -102,20 +104,30 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
           return matchesSearch && matchesCategory;
         }).toList();
 
-        // Sort to prioritize available products first, then claimed products
-        filtered.sort((a, b) {
-          final aStatus = (a["status"] ?? "claimed").toString().toLowerCase();
-          final bStatus = (b["status"] ?? "claimed").toString().toLowerCase();
+        // Get recently claimed items for immediate UI feedback
+        final claimedItems = ref.watch(claimedItemsProvider);
 
-          // Available products come first (available = 0, claimed = 1)
-          final aAvailable = aStatus == 'available' ? 0 : 1;
-          final bAvailable = bStatus == 'available' ? 0 : 1;
+        // Filter by status based on user selection
+        filtered = filtered.where((listing) {
+          final status =
+              (listing["status"] ?? "claimed").toString().toLowerCase();
+          final itemId = listing['id'].toString();
 
-          if (aAvailable != bAvailable) {
-            return aAvailable.compareTo(bAvailable);
+          // Check recently claimed items for immediate UI feedback
+          bool isRecentlyClaimed = claimedItems.contains(itemId);
+
+          if (_statusFilter == 'Available') {
+            return status == 'available' && !isRecentlyClaimed;
+          } else if (_statusFilter == 'Claimed') {
+            return status == 'claimed' || isRecentlyClaimed;
+          } else {
+            // 'All'
+            return true; // Show both available and claimed
           }
+        }).toList();
 
-          // For same status, sort by creation date (newest first)
+        // Sort by creation date (newest first)
+        filtered.sort((a, b) {
           final aCreated =
               DateTime.tryParse(a["created_at"] ?? "") ?? DateTime.now();
           final bCreated =
@@ -288,26 +300,24 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
 
                   SizedBox(height: 16),
 
-                  // Category Filter and View Toggle
+                  // Status Filter and View Toggle Row
                   Row(
                     children: [
-                      Expanded(
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              _buildCategoryChip('All'),
-                              _buildCategoryChip('Prepared Food'),
-                              _buildCategoryChip('Fresh Produce'),
-                              _buildCategoryChip('Packaged Food'),
-                              _buildCategoryChip('Baked Goods'),
-                              _buildCategoryChip('Beverages'),
-                              _buildCategoryChip('Other'),
-                            ],
-                          ),
+                      // Status Filter
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          children: [
+                            _buildStatusToggle('Available'),
+                            _buildStatusToggle('Claimed'),
+                            _buildStatusToggle('All'),
+                          ],
                         ),
                       ),
-                      SizedBox(width: 16),
+                      Spacer(),
                       // View Toggle
                       Container(
                         decoration: BoxDecoration(
@@ -323,6 +333,24 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                       ),
                     ],
                   ),
+
+                  SizedBox(height: 12),
+
+                  // Category Filter Row
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildCategoryChip('All'),
+                        _buildCategoryChip('Prepared Food'),
+                        _buildCategoryChip('Fresh Produce'),
+                        _buildCategoryChip('Packaged Food'),
+                        _buildCategoryChip('Baked Goods'),
+                        _buildCategoryChip('Beverages'),
+                        _buildCategoryChip('Other'),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -332,7 +360,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
               child: listingsAsync.when(
                 data: (listings) {
                   // Filter listings based on search and category
-                  final filtered = listings.where((listing) {
+                  var filtered = listings.where((listing) {
                     final title =
                         (listing["title"] ?? '').toString().toLowerCase();
                     final description =
@@ -347,22 +375,31 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                     return matchesSearch && matchesCategory;
                   }).toList();
 
-                  // Sort to prioritize available products first, then claimed products
-                  filtered.sort((a, b) {
-                    final aStatus =
-                        (a["status"] ?? "claimed").toString().toLowerCase();
-                    final bStatus =
-                        (b["status"] ?? "claimed").toString().toLowerCase();
+                  // Get recently claimed items for immediate UI feedback
+                  final claimedItems = ref.watch(claimedItemsProvider);
 
-                    // Available products come first (available = 0, claimed = 1)
-                    final aAvailable = aStatus == 'available' ? 0 : 1;
-                    final bAvailable = bStatus == 'available' ? 0 : 1;
+                  // Filter by status based on user selection
+                  filtered = filtered.where((listing) {
+                    final status = (listing["status"] ?? "claimed")
+                        .toString()
+                        .toLowerCase();
+                    final itemId = listing['id'].toString();
 
-                    if (aAvailable != bAvailable) {
-                      return aAvailable.compareTo(bAvailable);
+                    // Check recently claimed items for immediate UI feedback
+                    bool isRecentlyClaimed = claimedItems.contains(itemId);
+
+                    if (_statusFilter == 'Available') {
+                      return status == 'available' && !isRecentlyClaimed;
+                    } else if (_statusFilter == 'Claimed') {
+                      return status == 'claimed' || isRecentlyClaimed;
+                    } else {
+                      // 'All'
+                      return true; // Show both available and claimed
                     }
+                  }).toList();
 
-                    // For same status, sort by creation date (newest first)
+                  // Sort by creation date (newest first)
+                  filtered.sort((a, b) {
                     final aCreated = DateTime.tryParse(a["created_at"] ?? "") ??
                         DateTime.now();
                     final bCreated = DateTime.tryParse(b["created_at"] ?? "") ??
@@ -406,6 +443,39 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
         labelStyle: GoogleFonts.poppins(
           color: isSelected ? Colors.orange[600] : Colors.grey[700],
           fontSize: 13,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusToggle(String status) {
+    bool isSelected = _statusFilter == status;
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 2),
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _statusFilter = status;
+          });
+          // Update map markers when status filter changes and in map view
+          if (!_isListView) {
+            _createMarkers();
+          }
+        },
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.blue[100] : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Text(
+            status,
+            style: GoogleFonts.poppins(
+              color: isSelected ? Colors.blue[600] : Colors.grey[600],
+              fontSize: 11,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
         ),
       ),
     );
@@ -1002,6 +1072,11 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       });
 
       if (result == true) {
+        // Mark the item as claimed immediately for UI feedback
+        ref
+            .read(claimedItemsProvider.notifier)
+            .addClaimedItem(listingId.toString());
+
         // Also insert into food_claims table for backwards compatibility
         try {
           await supabase.from('food_claims').insert({

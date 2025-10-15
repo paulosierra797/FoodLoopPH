@@ -125,10 +125,34 @@ class UserService extends ChangeNotifier {
       final lastName = (meta['last_name'] ?? '').toString();
       final username = (meta['username'] ?? '').toString();
       final email = authUser.email ?? '';
-      final phoneNumber = (meta['phone_number'] ?? '').toString();
+      var phoneNumber = (meta['phone_number'] ?? '').toString();
 
       print(
           '📝 Creating user with data: firstName=$firstName, lastName=$lastName, username=$username, email=$email');
+
+      // Check if a user with this phone number already exists
+      if (phoneNumber.isNotEmpty) {
+        final existingByPhone = await supabase
+            .from('users')
+            .select('id, email')
+            .eq('phone_number', phoneNumber)
+            .maybeSingle();
+
+        if (existingByPhone != null) {
+          print(
+              '⚠️ User with phone number $phoneNumber already exists (ID: ${existingByPhone['id']})');
+          // If it's the same user ID, we don't need to create anything
+          if (existingByPhone['id'] == authUser.id) {
+            print('✅ User record already exists with correct ID');
+            return;
+          } else {
+            print(
+                '⚠️ Phone number belongs to different user, creating without phone number');
+            phoneNumber =
+                ''; // Clear phone number to avoid constraint violation
+          }
+        }
+      }
 
       // Create user record in database
       await supabase.from('users').insert({
@@ -138,15 +162,19 @@ class UserService extends ChangeNotifier {
         'username':
             username.isEmpty ? 'user_${authUser.id.substring(0, 8)}' : username,
         'email': email,
-        'phone_number': phoneNumber,
+        'phone_number': phoneNumber.isEmpty ? null : phoneNumber,
         'created_at': DateTime.now().toIso8601String(),
       });
 
       print('✅ _ensureUserExistsInDatabase: User record created successfully');
     } catch (e) {
       print('❌ _ensureUserExistsInDatabase: Failed to create user record: $e');
-      // If it fails due to duplicate key, that's fine - user already exists
-      if (!e.toString().contains('duplicate key')) {
+      // If it fails due to duplicate constraint violations, that's usually fine
+      if (e.toString().contains('duplicate key') ||
+          e.toString().contains('violates unique constraint')) {
+        print(
+            '🔄 Constraint violation handled gracefully - user may already exist');
+      } else {
         rethrow;
       }
     }

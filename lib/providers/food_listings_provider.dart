@@ -14,6 +14,13 @@ final foodListingsStreamProvider =
       .map((data) {
         debugPrint(
             'Real-time food listings update received: ${data.length} items');
+
+        // Log the status of each item for debugging
+        for (var item in data) {
+          debugPrint(
+              'Item ${item['id']}: ${item['title']} - Status: ${item['status']}');
+        }
+
         return List<Map<String, dynamic>>.from(data);
       });
 });
