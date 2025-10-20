@@ -654,11 +654,17 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     String displayQuantity = "$quantity $measurement";
     String address = (listing["location"] ?? "No address").toString();
     String time = (listing["expiration_date"] ?? "Unknown time").toString();
-    // No rating in your schema, so set to 0
-    double rating = 0.0;
+
+    // Format the expiration date properly
+    String formattedTime = _formatExpirationDate(time);
     // status: 'available' or 'claimed'
     String status = (listing["status"] ?? "claimed").toString().toLowerCase();
     bool available = status == 'available';
+
+    // Check if this is the current user's own post
+    final currentUser = Supabase.instance.client.auth.currentUser;
+    final posterId = listing["posted_by"]?.toString();
+    bool isOwnPost = currentUser != null && posterId == currentUser.id;
 
     return Container(
       margin: EdgeInsets.only(bottom: 16),
@@ -801,25 +807,11 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.star, size: 14, color: Colors.amber),
-                        SizedBox(width: 4),
-                        Text(
-                          rating.toString(),
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(width: 16),
-                    Row(
-                      children: [
                         Icon(Icons.access_time,
                             size: 14, color: Colors.grey[500]),
                         SizedBox(width: 4),
                         Text(
-                          time,
+                          formattedTime,
                           style: GoogleFonts.poppins(
                             fontSize: 12,
                             color: Colors.grey[600],
@@ -828,7 +820,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                       ],
                     ),
                     Spacer(),
-                    if (available)
+                    if (available && !isOwnPost)
                       ElevatedButton(
                         onPressed: () => _claimFood(listing),
                         style: ElevatedButton.styleFrom(
@@ -844,6 +836,25 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                           style: GoogleFonts.poppins(
                             fontSize: 12,
                             color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    if (available && isOwnPost)
+                      Container(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          borderRadius: BorderRadius.circular(20),
+                          border:
+                              Border.all(color: Colors.blue[200]!, width: 1),
+                        ),
+                        child: Text(
+                          "Your Post",
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: Colors.blue[600],
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -1162,5 +1173,63 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       return uri.replace(queryParameters: queryParams).toString();
     }
     return originalUrl;
+  }
+
+  // Format expiration date to a readable format
+  String _formatExpirationDate(String dateString) {
+    try {
+      DateTime date = DateTime.parse(dateString);
+      DateTime now = DateTime.now();
+
+      // Check if it's today
+      if (date.year == now.year &&
+          date.month == now.month &&
+          date.day == now.day) {
+        return 'Today';
+      }
+
+      // Check if it's tomorrow
+      DateTime tomorrow = now.add(Duration(days: 1));
+      if (date.year == tomorrow.year &&
+          date.month == tomorrow.month &&
+          date.day == tomorrow.day) {
+        return 'Tomorrow';
+      }
+
+      // Check if it's within this week
+      int daysUntil = date.difference(now).inDays;
+      if (daysUntil > 0 && daysUntil <= 7) {
+        List<String> weekdays = [
+          'Monday',
+          'Tuesday',
+          'Wednesday',
+          'Thursday',
+          'Friday',
+          'Saturday',
+          'Sunday'
+        ];
+        return weekdays[date.weekday - 1];
+      }
+
+      // For dates further away, show month and day
+      List<String> months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec'
+      ];
+      return '${months[date.month - 1]} ${date.day}';
+    } catch (e) {
+      // If parsing fails, return a default message
+      return 'Check expiry';
+    }
   }
 }
